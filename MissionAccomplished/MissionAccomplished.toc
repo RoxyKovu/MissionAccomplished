@@ -1,0 +1,46 @@
+## Interface: 11403
+## Title: MissionAccomplished
+## Notes: A comprehensive Hardcore add-on with various enhancements to improve gameplay.
+## Author: RoxyKovu
+## Version: 1.1
+
+## SavedVariables: MissionAccomplishedDB
+
+## Dependencies:
+## (List any actual dependencies here, if needed)
+
+## OptionalDeps: LibDataBroker-1.1, LibDBIcon-1.0, Blizzard_PaperDollFrame
+
+#------------------------------------
+# SHIFT+Drag Note:
+#  - SHIFT+Drag the GavrialsCall swirl to move notifications
+#  - SHIFT+Drag the XP bar to reposition it
+#  - Use Settings to toggle features (like XP bar, GavrialsCall)
+#------------------------------------
+
+#------------------------------------
+# AddOn Core / Modules
+#------------------------------------
+MissionAccomplished.xml
+Core.lua
+Modules/GavrialsCall/GavrialsCall.xml
+Modules/Bar/Bar.lua
+GavrialCorner.lua
+NagletsToolkit.lua
+Armory.lua
+Stats.lua
+
+#------------------------------------
+# UI / Settings
+#------------------------------------
+SettingsContent.lua
+About.lua
+Settings.lua
+Modules/GavrialsCall/GavrialsCall.lua
+
+#------------------------------------
+# AddOn Options Panel (NEW)
+#------------------------------------
+# This file creates a panel in Interface -> AddOns -> MissionAccomplished
+# with a button to open your custom settings.
+MissionAccomplished_OptionsPanel.lua
