@@ -2,7 +2,7 @@
 ## Title: MissionAccomplished
 ## Notes: A comprehensive Hardcore add-on with various enhancements to improve gameplay.
 ## Author: RoxyKovu
-## Version: 1.1
+## Version: 1.2
 
 ## SavedVariables: MissionAccomplishedDB
 

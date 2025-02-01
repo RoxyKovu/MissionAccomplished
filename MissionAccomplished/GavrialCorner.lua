@@ -5,19 +5,19 @@
 --   1) Journey Data (overall)
 --   2) Combat Data
 --   3) Historical Data
--- Enhanced styling: more color, spacing, simpler lines. 
--- Removes "Combat XP/hour" from the display. 
+-- Enhanced styling: more color, spacing, simpler lines.
+-- Removes "Combat XP/hour" from the display.
 -- Clamps any single-strike damage above 5000 as "N/A" to avoid impossible hits.
 --
 -- NOTE:
---   If you want to truly exclude giant hits from your DB, fix it in Core.lua 
---   (where highestDamage is set). This file just displays or clamps the result.
+--   This file now pulls all XP, time, and rate calculations from the Core module
+--   (MissionAccomplished.GetTotalXPSoFar, GetXPMaxTo60, GetProgressPercentage, etc.)
+--   to ensure consistency. Any duplicate calculations have been removed.
 --=============================================================================
 
 --------------------------------------------------
 -- (A) Local Helper Functions
 --------------------------------------------------
-
 local function ProperCase(str)
     if not str or str == "" then
         return "Unknown"
@@ -104,7 +104,7 @@ end
 --------------------------------------------------
 function GavrialCornerContent()
 
-    -- If we've already created this frame, just show & return it.
+    -- If the frame already exists, show and return it.
     if _G.SettingsFrameContent.journeyFrame then
         _G.SettingsFrameContent.journeyFrame:Show()
         return _G.SettingsFrameContent.journeyFrame
@@ -117,7 +117,7 @@ function GavrialCornerContent()
     local journeyFrame = CreateFrame("Frame", nil, parentFrame, "BackdropTemplate")
     journeyFrame:SetAllPoints(parentFrame)
 
-    -- A subtle border/backdrop
+    -- Create a subtle backdrop.
     journeyFrame:SetBackdrop({
         bgFile   = "Interface\\DialogFrame\\UI-DialogBox-Background",
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -136,18 +136,18 @@ function GavrialCornerContent()
     bgTexture:SetDrawLayer("BACKGROUND", -8)
 
     --------------------------------------------------
-    -- 3) Main FontString for content
+    -- 3) Main FontString for Content
     --------------------------------------------------
     local contentText = journeyFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     contentText:SetPoint("TOPLEFT", 20, -20)
     contentText:SetPoint("BOTTOMRIGHT", -20, 20)
     contentText:SetJustifyH("LEFT")
     contentText:SetJustifyV("TOP")
-    contentText:SetSpacing(4)    -- line spacing
+    contentText:SetSpacing(4)    -- Line spacing
     contentText:SetWordWrap(true)
 
     --------------------------------------------------
-    -- 4) Gather Data from Core.lua
+    -- 4) Gather Data from Core
     --------------------------------------------------
     local playerName = UnitName("player") or "Unknown"
     local level      = UnitLevel("player") or 1
@@ -160,27 +160,13 @@ function GavrialCornerContent()
 
     local totalXP    = MissionAccomplished.GetTotalXPSoFar()
     local xpMax      = MissionAccomplished.GetXPMaxTo60()
-    local percent    = (xpMax > 0) and (totalXP / xpMax * 100) or 0
+    local percent    = MissionAccomplished.GetProgressPercentage()
     local remain     = xpMax - totalXP
 
     local timePlayedStr   = MissionAccomplished.GetTotalTimePlayed() or "N/A"
     local xpPerHour       = MissionAccomplished.GetOverallXPPerHour() or 0
     local secsTo60        = MissionAccomplished.GetTimeToLevel60() or 0
     local timeTo60Str     = MissionAccomplished.FormatSeconds(secsTo60)
-
-    -- Combat data
-    local enemiesHour     = MissionAccomplished.GetEnemiesPerHour() or 0
-    local lowestHP        = MissionAccomplishedDB.lowestHP or "N/A"
-    local highestDamage   = MissionAccomplishedDB.highestDamage or 0
-    local totalDamage     = MissionAccomplishedDB.totalDamage or 0
-    local totalCbtTime    = MissionAccomplishedDB.totalCombatTime or 0
-    local avgDPS          = (totalCbtTime > 0) and (totalDamage / totalCbtTime) or 0
-
-    -- If highestDamage is suspiciously large (e.g. 14k?), display "N/A" instead.
-    local singleStrikeDisplay = highestDamage
-    if singleStrikeDisplay > 5000 then
-        singleStrikeDisplay = "N/A"
-    end
 
     --------------------------------------------------
     -- 5) Build Journey Data (Overall)
@@ -199,8 +185,20 @@ function GavrialCornerContent()
         "\n"
 
     --------------------------------------------------
-    -- 6) Build Combat Data (no more Combat XP/hour)
+    -- 6) Build Combat Data (no Combat XP/hour)
     --------------------------------------------------
+    local enemiesHour     = MissionAccomplished.GetEnemiesPerHour() or 0
+    local lowestHP        = MissionAccomplishedDB.lowestHP or "N/A"
+    local highestDamage   = MissionAccomplishedDB.highestDamage or 0
+    local totalDamage     = MissionAccomplishedDB.totalDamage or 0
+    local totalCbtTime    = MissionAccomplishedDB.totalCombatTime or 0
+    local avgDPS          = (totalCbtTime > 0) and (totalDamage / totalCbtTime) or 0
+
+    local singleStrikeDisplay = highestDamage
+    if singleStrikeDisplay > 5000 then
+        singleStrikeDisplay = "N/A"
+    end
+
     local combatSection = "|cff00ccff=== Combat Data ===|r\n" ..
         string.format("|cff99ccffLowest HP Seen:|r |cff00ff00%s|r\n", lowestHP) ..
         string.format("|cff99ccffMost Damage in a Strike:|r |cff00ff00%s|r\n", tostring(singleStrikeDisplay)) ..
@@ -212,7 +210,6 @@ function GavrialCornerContent()
     -- 7) Build Historical Data
     --------------------------------------------------
     local best = MissionAccomplishedDB.best or {}
-    -- Possibly update best record
     if level > (best.level or 0) then
         best.level   = level
         best.totalXP = totalXP

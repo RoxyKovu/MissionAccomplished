@@ -2,104 +2,133 @@
 -- SettingsContent.lua
 --=============================================================================
 -- This file defines the content for the "Settings" tab in your addon's UI.
--- Now includes:
---   1) Enable/Disable GavrialsCall event frame
---   2) Enable/Disable XP bar
---   3) SHIFT+drag instructions for moving frames
+-- It now includes:
+--   1) A section for Gavrials Callouts (events) with usage tips and toggles.
+--      - Toggle for enabling/disabling callouts.
+--      - Toggle for enabling/disabling event sounds.
+--   2) A section for the XP Bar with its own usage tips and toggle.
+--   3) Options are clearly separated by their effect.
+--
+-- When the settings window is shown, if the callouts are enabled the event
+-- frame stays up for repositioning. When the settings window is closed, the
+-- event frame reverts to its normal (fading out) behavior.
 --=============================================================================
 
 local GavrialsCall = MissionAccomplished.GavrialsCall
 local PREFIX = "MissionAcc"
 
--- The main function that creates and returns the settings frame
 local function SettingsContent()
     local settingsFrame = CreateFrame("Frame", nil, _G.SettingsFrameContent.contentFrame)
     settingsFrame:SetAllPoints(_G.SettingsFrameContent.contentFrame)
     settingsFrame:SetFrameStrata("DIALOG") -- ensure it's on top
 
-    -- Background
+    -- Background: A dark semi-transparent background.
     local background = settingsFrame:CreateTexture(nil, "BACKGROUND")
     background:SetAllPoints()
-    background:SetColorTexture(0, 0, 0, 0.1)
+    background:SetColorTexture(0, 0, 0, 0.3)
 
-    -- Header
+    -- Main Header
     local header = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     header:SetPoint("TOPLEFT", 20, -20)
     header:SetText("General Settings")
 
-    ----------------------------------------------------------------
-    -- 1) SHIFT+Drag Instructions
-    ----------------------------------------------------------------
-    local instructions = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    instructions:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -10)
-    instructions:SetJustifyH("LEFT")
-    instructions:SetText("|cff00ff00Tips:|r\n" ..
-        "• |cff00ccffSHIFT+Drag|r the GavrialsCall frame to move notifications.\n" ..
-        "• |cff00ccffSHIFT+Drag|r the XP bar to reposition it.\n" ..
-        "• Enable or disable each feature below:"
+    ----------------------------------------------------------------------------
+    -- Section 1: Gavrials Callouts (Events)
+    ----------------------------------------------------------------------------
+    local calloutsHeader = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    calloutsHeader:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -20)
+    calloutsHeader:SetText("Gavrials Callouts")
+
+    local calloutsTips = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    calloutsTips:SetPoint("TOPLEFT", calloutsHeader, "BOTTOMLEFT", 0, -10)
+    calloutsTips:SetJustifyH("LEFT")
+    calloutsTips:SetText("|cff00ff00Tips:|r\n" ..
+        "• Hold SHIFT and drag the notifications frame to reposition it.\n" ..
+        "• Event sounds play with each notification."
     )
 
-    ----------------------------------------------------------------
-    -- Helper: Create a CheckButton
-    ----------------------------------------------------------------
-    local function CreateCheckButton(parent, label, pointTable, onClick)
-        local check = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
-        check:SetPoint(unpack(pointTable))
-        check.text = check:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        check.text:SetPoint("LEFT", check, "RIGHT", 5, 0)
-        check.text:SetText(label)
-        check:SetScript("OnClick", onClick)
-        return check
-    end
+    -- Separator line
+    local separator1 = settingsFrame:CreateTexture(nil, "BACKGROUND")
+    separator1:SetColorTexture(1, 1, 1, 0.2)
+    separator1:SetPoint("TOPLEFT", calloutsTips, "BOTTOMLEFT", 0, -15)
+    separator1:SetPoint("TOPRIGHT", calloutsTips, "BOTTOMRIGHT", 0, -15)
+    separator1:SetHeight(1)
 
-    -- Ensure a saved variables table
-    if not MissionAccomplishedDB then
-        MissionAccomplishedDB = {}
-    end
-
-    ----------------------------------------------------------------
-    -- 2) Event Frame (GavrialsCall) Checkbox
-    ----------------------------------------------------------------
-    local function OnEnableEventFrameClick(self)
+    ----------------------------------------------------------------------------
+    -- Toggle: Enable Gavrials Callouts
+    ----------------------------------------------------------------------------
+    local function OnToggleCallouts(self)
         local enabled = self:GetChecked()
         MissionAccomplishedDB.eventFrameEnabled = enabled
 
         if enabled then
             if GavrialsCall and GavrialsCall.Show then
-                GavrialsCall.Show(true) -- Show persistently
+                GavrialsCall.Show(true)  -- Show persistently (no fade)
             end
             C_ChatInfo.SendAddonMessage(PREFIX, "EnableEventFrame", "PARTY")
         else
             if GavrialsCall and GavrialsCall.Hide then
-                GavrialsCall.Hide()
+                GavrialsCall.Hide()  -- Fade out when disabled
             end
             C_ChatInfo.SendAddonMessage(PREFIX, "DisableEventFrame", "PARTY")
         end
     end
 
-    local eventFrameCheckbox = CreateCheckButton(
-        settingsFrame,
-        "Enable GavrialsCall Notifications",
-        { "TOPLEFT", instructions, "BOTTOMLEFT", 0, -20 },
-        OnEnableEventFrameClick
-    )
-    eventFrameCheckbox:SetChecked(MissionAccomplishedDB.eventFrameEnabled or false)
-
-    -- If already enabled, ensure it shows
-    if MissionAccomplishedDB.eventFrameEnabled then
-        if GavrialsCall and GavrialsCall.Show then
-            GavrialsCall.Show(true)
-        end
+    local calloutsCheckbox = CreateFrame("CheckButton", nil, settingsFrame, "UICheckButtonTemplate")
+    calloutsCheckbox:SetPoint("TOPLEFT", separator1, "BOTTOMLEFT", 0, -20)
+    calloutsCheckbox.text = calloutsCheckbox:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    calloutsCheckbox.text:SetPoint("LEFT", calloutsCheckbox, "RIGHT", 5, 0)
+    calloutsCheckbox.text:SetText("Enable Gavrials Callouts")
+    calloutsCheckbox:SetScript("OnClick", OnToggleCallouts)
+    calloutsCheckbox:SetChecked(MissionAccomplishedDB.eventFrameEnabled or false)
+    if MissionAccomplishedDB.eventFrameEnabled and GavrialsCall and GavrialsCall.Show then
+        GavrialsCall.Show(true)
     end
 
-    ----------------------------------------------------------------
-    -- 3) XP Bar Checkbox
-    ----------------------------------------------------------------
-    local function OnEnableXPBarClick(self)
+    ----------------------------------------------------------------------------
+    -- Toggle: Enable Event Sounds
+    ----------------------------------------------------------------------------
+    local function OnToggleEventSounds(self)
+        local enabled = self:GetChecked()
+        MissionAccomplishedDB.eventSoundsEnabled = enabled
+    end
+
+    local eventSoundsCheckbox = CreateFrame("CheckButton", nil, settingsFrame, "UICheckButtonTemplate")
+    eventSoundsCheckbox:SetPoint("TOPLEFT", calloutsCheckbox, "BOTTOMLEFT", 0, -15)
+    eventSoundsCheckbox.text = eventSoundsCheckbox:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    eventSoundsCheckbox.text:SetPoint("LEFT", eventSoundsCheckbox, "RIGHT", 5, 0)
+    eventSoundsCheckbox.text:SetText("Enable Event Sounds")
+    eventSoundsCheckbox:SetScript("OnClick", OnToggleEventSounds)
+    eventSoundsCheckbox:SetChecked(MissionAccomplishedDB.eventSoundsEnabled ~= false)
+
+    ----------------------------------------------------------------------------
+    -- Section 2: XP Bar
+    ----------------------------------------------------------------------------
+    local xpHeader = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    xpHeader:SetPoint("TOPLEFT", eventSoundsCheckbox, "BOTTOMLEFT", 0, -40)
+    xpHeader:SetText("XP Bar")
+
+    local xpTips = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    xpTips:SetPoint("TOPLEFT", xpHeader, "BOTTOMLEFT", 0, -10)
+    xpTips:SetJustifyH("LEFT")
+    xpTips:SetText("|cff00ff00Tips:|r\n" ..
+        "• Hold SHIFT and drag the XP Bar to reposition it.\n" ..
+        "• The XP Bar displays your progress toward level 60."
+    )
+
+    local separator2 = settingsFrame:CreateTexture(nil, "BACKGROUND")
+    separator2:SetColorTexture(1, 1, 1, 0.2)
+    separator2:SetPoint("TOPLEFT", xpTips, "BOTTOMLEFT", 0, -15)
+    separator2:SetPoint("TOPRIGHT", xpTips, "BOTTOMRIGHT", 0, -15)
+    separator2:SetHeight(1)
+
+    ----------------------------------------------------------------------------
+    -- Toggle: Enable XP Bar
+    ----------------------------------------------------------------------------
+    local function OnToggleXPBar(self)
         local enabled = self:GetChecked()
         MissionAccomplishedDB.enableXPBar = enabled
 
-        -- We'll call a toggle function from Bar.lua:
         if enabled then
             MissionAccomplished_Bar_SetShown(true)
         else
@@ -107,34 +136,34 @@ local function SettingsContent()
         end
     end
 
-    local xpBarCheckbox = CreateCheckButton(
-        settingsFrame,
-        "Enable XP Bar",
-        { "TOPLEFT", eventFrameCheckbox, "BOTTOMLEFT", 0, -20 },
-        OnEnableXPBarClick
-    )
-    xpBarCheckbox:SetChecked(MissionAccomplishedDB.enableXPBar or false)
-
-    -- If already enabled, show it
+    local xpCheckbox = CreateFrame("CheckButton", nil, settingsFrame, "UICheckButtonTemplate")
+    xpCheckbox:SetPoint("TOPLEFT", separator2, "BOTTOMLEFT", 0, -20)
+    xpCheckbox.text = xpCheckbox:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    xpCheckbox.text:SetPoint("LEFT", xpCheckbox, "RIGHT", 5, 0)
+    xpCheckbox.text:SetText("Enable XP Bar")
+    xpCheckbox:SetScript("OnClick", OnToggleXPBar)
+    xpCheckbox:SetChecked(MissionAccomplishedDB.enableXPBar or false)
     if MissionAccomplishedDB.enableXPBar then
         MissionAccomplished_Bar_SetShown(true)
     end
 
-    ----------------------------------------------------------------
-    -- 4) Behavior When Settings Frame Shown/Hidden
-    ----------------------------------------------------------------
+    ----------------------------------------------------------------------------
+    -- Settings Frame Show/Hide Behavior
+    ----------------------------------------------------------------------------
     settingsFrame:SetScript("OnShow", function()
-        -- Make GavrialsCall frame persistent while settings are visible
-        if GavrialsCall and GavrialsCall.Show then
+        -- When the settings window is shown and if callouts are enabled,
+        -- keep the event box up so the user can reposition it.
+        if MissionAccomplishedDB.eventFrameEnabled and GavrialsCall and GavrialsCall.Show then
             GavrialsCall.Show(true)
         end
     end)
 
     settingsFrame:SetScript("OnHide", function()
-        -- Return to normal fade-out
+        -- When the settings window is closed, revert the event box
+        -- to its normal behavior (fade out according to its settings).
         if GavrialsCall then
             GavrialsCall.isPersistent = false
-            GavrialsCall.Hide() -- hide immediately
+            GavrialsCall.Hide()
         end
     end)
 

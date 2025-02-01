@@ -4,6 +4,10 @@
 -- Creates and updates the XP bar for MissionAccomplished, positioned near
 -- the player frame. Includes an attached custom icon (gavicon) overlapping on
 -- the left. SHIFT+Drag to move. Provides a toggle function to show/hide.
+-- Additionally, when the player is level 60:
+--   - The bar fills to 100%
+--   - The text shows a completion message and any overflow EXP.
+-- The tooltip now also shows the estimated time remaining until level 60.
 --=============================================================================
 
 MissionAccomplished = MissionAccomplished or {}
@@ -75,7 +79,7 @@ function MissionAccomplished_Bar_Setup()
     local xpText = xpBar:CreateFontString("MissionAccomplishedXPText", "OVERLAY", "GameFontHighlight")
     xpText:SetPoint("CENTER", xpBar, "CENTER", 0, 0)
     xpText:SetFont("Fonts\\FRIZQT__.TTF", 8, "OUTLINE") 
-    xpText:SetText("0.0% | XP Remaining: 0") 
+    xpText:SetText("0.0% | XP Remaining: 0")
 
     -- Attach icon on the left
     local icon = MissionAccomplished_Bar_AddIcon(barFrame)
@@ -127,19 +131,19 @@ function MissionAccomplished_Bar_AddIcon(parent)
 end
 
 ---------------------------------------------------------------
--- 3) SHOW TOOLTIP
+-- 3) SHOW TOOLTIP (Now Includes Time Until Level 60)
 ---------------------------------------------------------------
 function MissionAccomplished_Bar_ShowTooltip(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    local playerName       = UnitName("player") or "Player"
-    local level            = UnitLevel("player") or 0
-    local currentXP        = UnitXP("player") or 0
-    local xpThisLevel      = UnitXPMax("player") or 1
-    local xpSoFar          = MissionAccomplished.GetTotalXPSoFar()
-    local xpMax            = MissionAccomplished.GetXPMaxTo60()
-    local xpLeft           = xpMax - xpSoFar
-    local percentComplete  = (xpSoFar / xpMax) * 100
-    local timePlayed       = MissionAccomplished.GetTotalTimePlayed()
+    local playerName   = UnitName("player") or "Player"
+    local level        = UnitLevel("player") or 0
+    local currentXP    = UnitXP("player") or 0
+    local xpThisLevel  = UnitXPMax("player") or 1
+    local xpSoFar      = MissionAccomplished.GetTotalXPSoFar()
+    local xpMax        = MissionAccomplished.GetXPMaxTo60()
+    local xpLeft       = xpMax - xpSoFar
+    local percentComplete = (xpSoFar / xpMax) * 100
+    local timePlayed   = MissionAccomplished.GetTotalTimePlayed()
 
     GameTooltip:AddLine("|cff00ff00MissionAccomplished|r")
     GameTooltip:AddLine(playerName .. "'s Journey", 1, 1, 1, true)
@@ -149,6 +153,10 @@ function MissionAccomplished_Bar_ShowTooltip(self)
     GameTooltip:AddLine("To Level 60:")
     GameTooltip:AddLine(string.format("Overall Progress: %.1f%%", percentComplete), 1, 1, 1)
     GameTooltip:AddLine(string.format("EXP Needed: %d", xpLeft), 1, 1, 1)
+    if level < 60 then
+        local timeTo60 = MissionAccomplished.GetTimeToLevel60()
+        GameTooltip:AddLine(string.format("Time until level 60: %s", MissionAccomplished.FormatSeconds(timeTo60)), 1, 1, 1)
+    end
     GameTooltip:AddLine(string.format("Time Played: %s", timePlayed), 1, 1, 1)
     GameTooltip:AddLine(" ")
     GameTooltip:AddLine("Shift + Drag the bar to reposition it.", 1, 1, 1)
@@ -168,12 +176,23 @@ function MissionAccomplished_Bar_Update()
 
     local xpSoFar = MissionAccomplished.GetTotalXPSoFar()
     local xpMax   = MissionAccomplished.GetXPMaxTo60()
+    local level   = UnitLevel("player") or 1
 
-    local percent = (xpSoFar / xpMax) * 100
-    local xpLeft  = xpMax - xpSoFar
-
-    xpBar:SetValue(percent / 100)
-    xpText:SetText(string.format("%.1f%% | XP Remaining: %d", percent, xpLeft))
+    if level >= 60 then
+        -- For level 60 or higher, cap the bar at 100% and show completion message.
+        xpBar:SetValue(1)
+        local overflow = xpSoFar - xpMax
+        if overflow > 0 then
+            xpText:SetText(string.format("100%% | Level 60 complete! Overflow: %d EXP", overflow))
+        else
+            xpText:SetText("Level 60 complete!")
+        end
+    else
+        local percent = (xpSoFar / xpMax) * 100
+        local xpLeft = xpMax - xpSoFar
+        xpBar:SetValue(percent / 100)
+        xpText:SetText(string.format("%.1f%% | XP Remaining: %d", percent, xpLeft))
+    end
 end
 
 ---------------------------------------------------------------
@@ -186,8 +205,7 @@ eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 eventFrame:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_XP_UPDATE"
        or event == "PLAYER_LEVEL_UP"
-       or event == "PLAYER_ENTERING_WORLD"
-    then
+       or event == "PLAYER_ENTERING_WORLD" then
         MissionAccomplished_Bar_Update()
     end
 end)

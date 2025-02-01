@@ -1,8 +1,12 @@
-------------------------------------------------------------
+--=============================================================================
 -- armory.lua
--- Armory frame creation with integrated stats panel and pet model
--- Enhanced with a custom background image (Armory.blp)
-------------------------------------------------------------
+-- Armory frame creation with integrated stats panel and pet model.
+-- Enhanced with a custom background image (Armory.blp).
+-- The frame now also displays Journey Data (using Core calculation functions)
+-- to show overall XP progress, and if at level 60, displays overflow EXP.
+-- Additionally, the stats frame is created (or reused) so that combat data is
+-- recorded and calculated continuously even when the menu is closed.
+--=============================================================================
 
 local function MahlersArmoryContent()
     -- Ensure the parent frame exists
@@ -16,7 +20,6 @@ local function MahlersArmoryContent()
     armoryFrame:SetAllPoints(_G.SettingsFrameContent.contentFrame)
     armoryFrame:SetFrameStrata("DIALOG")
     armoryFrame:SetBackdrop({
-        -- Retain existing backdrop for borders
         bgFile   = "Interface\\DialogFrame\\UI-DialogBox-Background",
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
         tile     = true,
@@ -25,27 +28,34 @@ local function MahlersArmoryContent()
     })
     armoryFrame:SetBackdropColor(0.1, 0.1, 0.1, 0.8)
 
-    -- **Added: Background Image Integration**
-    -- Create a separate background texture layer for Armory.blp
+    ------------------------------------------------------------
+    -- Background Image Integration
+    ------------------------------------------------------------
     local backgroundTexture = armoryFrame:CreateTexture(nil, "BACKGROUND")
     backgroundTexture:SetAllPoints(armoryFrame)
-    backgroundTexture:SetTexture("Interface\\AddOns\\MissionAccomplished\\Contents\\Armory.blp") -- Ensure this path is correct
-    backgroundTexture:SetAlpha(0.2) -- Adjust transparency here (0.0 = fully transparent, 1.0 = fully opaque)
-    backgroundTexture:SetDrawLayer("BACKGROUND", -1) -- Ensure it's behind other elements
+    backgroundTexture:SetTexture("Interface\\AddOns\\MissionAccomplished\\Contents\\Armory.blp") -- Ensure the path is correct
+    backgroundTexture:SetAlpha(0.2) -- Adjust transparency as needed
+    backgroundTexture:SetDrawLayer("BACKGROUND", -1)
 
+    ------------------------------------------------------------
     -- Title
+    ------------------------------------------------------------
     local title = armoryFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
     title:SetPoint("TOP", armoryFrame, "TOP", 0, -20)
     title:SetText("|cffffd700Mahler's Armory|r")
 
+    ------------------------------------------------------------
     -- Character Model
+    ------------------------------------------------------------
     local characterModel = CreateFrame("PlayerModel", nil, armoryFrame)
     characterModel:SetSize(190, 290)
     characterModel:SetPoint("LEFT", armoryFrame, "LEFT", 50, 0)
     characterModel:SetUnit("player")
     characterModel:SetFacing(0.5)
 
+    ------------------------------------------------------------
     -- Pet Model (if available)
+    ------------------------------------------------------------
     local petModel = CreateFrame("PlayerModel", nil, armoryFrame)
     petModel:SetSize(150, 230)
     petModel:SetPoint("LEFT", characterModel, "LEFT", 25, -10) -- Adjusted position to place behind the player
@@ -60,20 +70,27 @@ local function MahlersArmoryContent()
         end
     end
 
-    -- Update the pet model when entering the world or pet status changes
     petModel:RegisterEvent("PLAYER_ENTERING_WORLD")
     petModel:RegisterEvent("UNIT_PET")
     petModel:SetScript("OnEvent", UpdatePetModel)
     UpdatePetModel()
 
     ------------------------------------------------------------
-    -- Load Stats Frame
+    -- Load (or Reparent) Stats Frame (Always created so combat data is updated)
     ------------------------------------------------------------
-    local statsFrame = _G.MahlersStatsContent and _G.MahlersStatsContent(armoryFrame)
-    if statsFrame then
+    local statsFrame
+    if _G.MahlersStatsFrame then
+        statsFrame = _G.MahlersStatsFrame
+        statsFrame:SetParent(armoryFrame)
+        statsFrame:ClearAllPoints()
+        statsFrame:SetPoint("LEFT", characterModel, "RIGHT", 60, 0)
+        statsFrame:Show()
+    elseif _G.MahlersStatsContent then
+        statsFrame = _G.MahlersStatsContent(armoryFrame)
+        _G.MahlersStatsFrame = statsFrame  -- store globally for continuous updates
         statsFrame:SetSize(200, 400) -- Adjust width and height as needed
         statsFrame:SetPoint("LEFT", characterModel, "RIGHT", 60, 0) -- Adjust position as needed
-        statsFrame:Show() -- Ensure it is visible with the armory
+        statsFrame:Show()
     else
         print("Error: Failed to load Mahler's Stats frame.")
     end
@@ -105,7 +122,7 @@ local function MahlersArmoryContent()
     }
 
     ------------------------------------------------------------
-    -- Function to Create Slot Buttons with Updated Icon Handling
+    -- Function to Create Slot Buttons (Icon Handling)
     ------------------------------------------------------------
     local function CreateSlotButtonCommon(slotName, defaultTexture, position)
         local slotButtonSize = 36
@@ -117,7 +134,7 @@ local function MahlersArmoryContent()
         local function UpdateSlotIcon()
             local inventorySlot = GetInventorySlotInfo(slotName .. "Slot")
             if inventorySlot then
-                local itemTexture = GetInventoryItemTexture("player", inventorySlot) -- Fetch equipped item's texture
+                local itemTexture = GetInventoryItemTexture("player", inventorySlot)
                 local icon = _G[button:GetName() .. "IconTexture"]
                 if icon then
                     if itemTexture then
@@ -133,7 +150,6 @@ local function MahlersArmoryContent()
             end
         end
 
-        -- Update the icon on show and on equipment change
         button:HookScript("OnShow", UpdateSlotIcon)
         button:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
         button:SetScript("OnEvent", function(_, _, slotID)
@@ -142,7 +158,6 @@ local function MahlersArmoryContent()
             end
         end)
 
-        -- Tooltip Handlers
         button:SetScript("OnEnter", function(self)
             local inventorySlot = GetInventorySlotInfo(slotName .. "Slot")
             if inventorySlot then
@@ -158,9 +173,7 @@ local function MahlersArmoryContent()
             GameTooltip:Hide()
         end)
 
-        -- Initial Icon Update
         UpdateSlotIcon()
-
         return button
     end
 
@@ -169,6 +182,28 @@ local function MahlersArmoryContent()
     ------------------------------------------------------------
     for slotName, position in pairs(slotPositions) do
         CreateSlotButtonCommon(slotName, "Interface\\PaperDoll\\UI-PaperDoll-Slot-" .. slotName, position)
+    end
+
+    ------------------------------------------------------------
+    -- (New) Journey Data Panel
+    -- Uses Core calculation functions to display overall XP progress.
+    ------------------------------------------------------------
+    local journeyStats = armoryFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    journeyStats:SetPoint("BOTTOM", armoryFrame, "BOTTOM", 0, 20)
+    journeyStats:SetJustifyH("CENTER")
+    local totalXP = MissionAccomplished.GetTotalXPSoFar()
+    local xpMax = MissionAccomplished.GetXPMaxTo60()
+    local progress = MissionAccomplished.GetProgressPercentage()
+    local xpRemaining = xpMax - totalXP
+    if UnitLevel("player") >= 60 then
+        local overflow = MissionAccomplished.GetOverflowXP()
+        if overflow > 0 then
+            journeyStats:SetText(string.format("Level 60 complete! Overflow: %d EXP", overflow))
+        else
+            journeyStats:SetText("Level 60 complete!")
+        end
+    else
+        journeyStats:SetText(string.format("%.1f%% | XP Remaining: %d", progress, xpRemaining))
     end
 
     return armoryFrame
