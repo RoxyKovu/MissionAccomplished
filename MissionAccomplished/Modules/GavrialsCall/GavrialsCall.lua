@@ -35,6 +35,32 @@ GavrialsCall.lastMessageCooldown      = 30
 
 local welcomeShown = false -- ensures the welcome message is shown only once
 
+-- Table to track previously online guild members for roster updates.
+local prevGuildOnline = {}
+
+------------------------------------------------------------------------------
+-- Wrapper: SendAddonMessage using table parameters.
+-- First, try calling C_ChatInfo.SendAddonMessage with a table.
+-- If that fails, fall back to using the old signature:
+--    C_ChatInfo.SendAddonMessage(prefix, message, channel)
+------------------------------------------------------------------------------
+function GavrialsCall.SendAddonMessage(params)
+    if type(params) ~= "table" then
+        error("SendAddonMessage expects a table parameter", 2)
+    end
+    if C_ChatInfo and type(C_ChatInfo.SendAddonMessage) == "function" then
+        local success, result = pcall(C_ChatInfo.SendAddonMessage, params)
+        if success then
+            return result
+        else
+            -- Fallback to old signature if the table call fails.
+            return C_ChatInfo.SendAddonMessage(params.prefix, params.message, params.channel)
+        end
+    else
+        print("C_ChatInfo.SendAddonMessage is unavailable")
+    end
+end
+
 ------------------------------------------------------------------------------
 -- 1) Reset Health Notifications
 ------------------------------------------------------------------------------
@@ -223,6 +249,7 @@ function GavrialsCall.PlayEventSound(eventKey)
         GuildLowHealth       = "Sound\\Spells\\PVPFlagTaken.wav",
         GuildEnteredInstance = "Sound\\Interface\\RaidWarning.wav",
         Welcome              = "Sound\\Interface\\LevelUp.wav",
+        GuildMemberOnline    = "Sound\\Interface\\RaidWarning.wav",  -- example sound
     }
     local soundFile = soundMap[eventKey]
     if soundFile then
@@ -421,7 +448,11 @@ function GavrialsCall.HandleCharacterEvent(event, ...)
             local specialMsg = string.format("Congratulations, you have reached level 60 – the pinnacle of achievement! (%s from your guild)", guildName)
             GavrialsCall.DisplayMessage(pName, specialMsg, "Interface\\Icons\\INV_Misc_Token_OrcTroll", {1, 0.84, 0})
             GavrialsCall.PlayEventSound("MaxLevel")
-            C_ChatInfo.SendAddonMessage(PREFIX, "MaxLevel:" .. pName .. " from your guild has reached level 60 – the pinnacle of achievement! Your legend now begins!", "GUILD")
+            GavrialsCall.SendAddonMessage({
+                prefix  = PREFIX,
+                message = "MaxLevel:" .. pName .. " from your guild has reached level 60 – the pinnacle of achievement! Your legend now begins!",
+                channel = "GUILD",
+            })
         else
             GavrialsCall.DisplayMessage(pName, "you have reached level " .. newLevel .. "! Congrats!", "Interface\\Icons\\Spell_Nature_EnchantArmor", {0, 1, 0})
             GavrialsCall.PlayEventSound("LevelUp")
@@ -446,7 +477,11 @@ function GavrialsCall.HandleCharacterEvent(event, ...)
                         iconPath = "Interface\\Icons\\Ability_Creature_Cursed_05"
                         col      = {1, 0, 0}
                         local guildMsg = pName .. " is at 10% HP! Send help!"
-                        C_ChatInfo.SendAddonMessage(PREFIX, "GuildLowHealth:" .. guildMsg, "GUILD")
+                        GavrialsCall.SendAddonMessage({
+                            prefix  = PREFIX,
+                            message = "GuildLowHealth:" .. guildMsg,
+                            channel = "GUILD",
+                        })
                     end
 
                     GavrialsCall.DisplayMessage(pName, msg, iconPath, col)
@@ -478,7 +513,11 @@ function GavrialsCall.HandleCharacterEvent(event, ...)
             if not GavrialsCall.previousInstanceName then
                 GavrialsCall.DisplayMessage(pName, "you are entering " .. instanceName .. ", good luck!", "Interface\\Icons\\Spell_Nature_AstralRecalGroup", {0, 1, 0})
                 local guildMsg = pName .. " from your guild is entering " .. instanceName .. ", good luck!"
-                C_ChatInfo.SendAddonMessage(PREFIX, "GuildEnteredInstance:" .. guildMsg, "GUILD")
+                GavrialsCall.SendAddonMessage({
+                    prefix  = PREFIX,
+                    message = "GuildEnteredInstance:" .. guildMsg,
+                    channel = "GUILD",
+                })
                 GavrialsCall.PlayEventSound("EnteredInstance")
             end
             GavrialsCall.previousInstanceName = instanceName
@@ -535,6 +574,37 @@ function GavrialsCall.HandleCharacterEvent(event, ...)
                 GavrialsCall.PlayEventSound("GuildDeath")
             end
         end
+
+    -- New branch: Handle guild roster updates to detect newly online members.
+    elseif event == "GUILD_ROSTER_UPDATE" then
+        local numTotal = GetNumGuildMembers()
+        local currentOnline = {}
+        for i = 1, numTotal do
+            local name, rank, rankIndex, level, classDisplayName, zone, note, officerNote, isOnline, status, classFileName = GetGuildRosterInfo(i)
+            if isOnline then
+                currentOnline[name] = true
+                if not prevGuildOnline[name] then
+                    -- Use a mapping of class tokens to icon paths.
+                    local classIcons = {
+                        WARRIOR     = "Interface\\Icons\\Ability_Warrior_Cleave",
+                        PALADIN     = "Interface\\Icons\\Spell_Holy_SealOfMight",
+                        HUNTER      = "Interface\\Icons\\Ability_Hunter_RunningShot",
+                        ROGUE       = "Interface\\Icons\\Ability_Stealth",
+                        PRIEST      = "Interface\\Icons\\Spell_Holy_GuardianSpirit",
+                        DEATHKNIGHT = "Interface\\Icons\\Spell_Deathknight_ClassIcon",
+                        SHAMAN      = "Interface\\Icons\\Spell_Nature_Lightning",
+                        MAGE        = "Interface\\Icons\\Spell_Frost_IceStorm",
+                        WARLOCK     = "Interface\\Icons\\Spell_Shadow_DeathCoil",
+                        DRUID       = "Interface\\Icons\\Ability_Druid_Maul",
+                    }
+                    local iconPath = (classFileName and classIcons[classFileName]) or "Interface\\Icons\\INV_Misc_QuestionMark"
+                    local msg = name .. " (" .. (classDisplayName or "Unknown") .. ") is now online!"
+                    GavrialsCall.DisplayMessage(name, msg, iconPath, {0.2, 0.8, 1})
+                    GavrialsCall.PlayEventSound("GuildMemberOnline")
+                end
+            end
+        end
+        prevGuildOnline = currentOnline
     end
 end
 
@@ -555,11 +625,16 @@ function GavrialsCall.Init()
     GavrialsCall.eventFrame:RegisterEvent("UPDATE_EXHAUSTION")
     GavrialsCall.eventFrame:RegisterEvent("UNIT_AURA")
     GavrialsCall.eventFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+    -- Use GUILD_ROSTER_UPDATE instead of a non-existent event.
+    GavrialsCall.eventFrame:RegisterEvent("GUILD_ROSTER_UPDATE")
     GavrialsCall.eventFrame:SetScript("OnEvent", function(_, e, ...)
         GavrialsCall.HandleCharacterEvent(e, ...)
     end)
 
     GavrialsCall.ResetHealthNotifications()
+
+    -- Force an update of the guild roster to have current information.
+    GuildRoster()
 
     -- Display the progress message locally immediately upon login.
     DisplayProgressMessage()
@@ -582,16 +657,63 @@ initFrame:SetScript("OnEvent", function(_, event, ...)
         if addonName == "MissionAccomplished" then
             GavrialsCall.Init()
         end
-    elseif event == "CHAT_MSG_ADDON" then
-        local prefix, message, distribution, sender = ...
-        if prefix == PREFIX then
-            if message == "EnableEventFrame" then
-                GavrialsCall.Show(false)
-            elseif message == "DisableEventFrame" then
-                GavrialsCall.Hide()
-            else
-                GavrialsCall.HandleEventMessage(message, sender)
+elseif event == "CHAT_MSG_ADDON" then
+    local prefix, message, distribution, sender = ...
+    if prefix == PREFIX then
+        if message == "EnableEventFrame" then
+            GavrialsCall.Show(false)
+        elseif message == "DisableEventFrame" then
+            GavrialsCall.Hide()
+        elseif message == "AddonPing" then
+            -- Always reply with your own addon data
+            local playerName = UnitName("player")
+            local race = UnitRace("player") or "Unknown"
+            local class = select(1, UnitClass("player")) or "Unknown"
+            local level = UnitLevel("player") or 1
+            local progress = MissionAccomplished.GetProgressPercentage() or 0
+            local reply = string.format("AddonReply:%s;%s;%s;%d;%.1f", playerName, race, class, level, progress)
+            GavrialsCall.SendAddonMessage({
+                prefix  = PREFIX,
+                message = reply,
+                channel = "GUILD"
+            })
+        elseif message:sub(1,10) == "AddonReply" then
+            -- Parse the reply and update the global table.
+            local dataString = message:sub(12)  -- Remove "AddonReply:" and the separator
+            local name, race, class, level, progress = strsplit(";", dataString)
+            level = tonumber(level) or 1
+            progress = tonumber(progress) or 0
+            _G.MissionAccomplished_GuildAddonMembers = _G.MissionAccomplished_GuildAddonMembers or {}
+            local updated = false
+            for i, v in ipairs(_G.MissionAccomplished_GuildAddonMembers) do
+                if v.name:lower() == name:lower() then
+                    v.race = race
+                    v.class = class
+                    v.level = level
+                    v.progress = progress
+                    updated = true
+                    break
+                end
             end
+            if not updated then
+                table.insert(_G.MissionAccomplished_GuildAddonMembers, {
+                    name = name, race = race, class = class, level = level, progress = progress
+                })
+            end
+            -- Ensure self always reports as having the addon.
+            local selfName = UnitName("player")
+            if name:lower() == selfName:lower() then
+                for i, v in ipairs(_G.MissionAccomplished_GuildAddonMembers) do
+                    if v.name:lower() == selfName:lower() then
+                        v.progress = progress  -- update self's progress
+                        break
+                    end
+                end
+            end
+        else
+            GavrialsCall.HandleEventMessage(message, sender)
         end
+    end
+
     end
 end)

@@ -28,15 +28,14 @@ local menuTabs = {
             local armoryFrame
             if _G.MissionAccomplishedArmoryFrame then
                 armoryFrame = _G.MissionAccomplishedArmoryFrame
-                armoryFrame:Show() -- Show the frame if it already exists
+                armoryFrame:Show()
             else
-                armoryFrame = _G.MahlersArmoryContent() -- Create the frame if it doesn't exist
+                armoryFrame = _G.MahlersArmoryContent()
             end
-
-            -- Return the frame to ensure it displays correctly
             return armoryFrame
         end
     },
+    { name = "Guild Functions",    contentFunc = _G.MissionAccomplished_GuildContent },  -- Fixed reference
     { name = "Settings",           contentFunc = SettingsContent },
     { name = "About",              contentFunc = AboutContent },
 }
@@ -145,61 +144,69 @@ local function MissionAccomplished_Settings_Setup()
     menuBackground:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
 
     -- Create a button for each tab.
+    local visibleTabIndex = 0
     for i, tab in ipairs(menuTabs) do
-        local button = CreateFrame("Button", nil, menuBackground, "UIPanelButtonTemplate")
-        button:SetSize(160, 40)
-        button:SetPoint("TOPLEFT", 10, -10 - (i - 1) * 50)
-        button:SetText(tab.name)
-        button.contentFunc = tab.contentFunc
+        -- If this is the "Guild Functions" tab and the player is not in a guild, skip it.
+        if tab.name == "Guild Functions" and not IsInGuild() then
+            -- Optionally, you can print a debug message:
+            -- print("Player not in a guild; skipping Guild Functions tab.")
+        else
+            visibleTabIndex = visibleTabIndex + 1
+            local button = CreateFrame("Button", nil, menuBackground, "UIPanelButtonTemplate")
+            button:SetSize(160, 40)
+            button:SetPoint("TOPLEFT", 10, -10 - (visibleTabIndex - 1) * 50)
+            button:SetText(tab.name)
+            button.contentFunc = tab.contentFunc
 
-        button:SetScript("OnClick", function(self)
-            if activeTabButton and activeTabButton ~= self then
-                activeTabButton:SetNormalFontObject("GameFontNormal")
-            end
-            activeTabButton = self
-            self:SetNormalFontObject("GameFontHighlight")
+            button:SetScript("OnClick", function(self)
+                if activeTabButton and activeTabButton ~= self then
+                    activeTabButton:SetNormalFontObject("GameFontNormal")
+                end
+                activeTabButton = self
+                self:SetNormalFontObject("GameFontHighlight")
 
-            HideAllTabFrames()  -- Hide previous content
+                HideAllTabFrames()  -- Hide previous content
 
-            -- Debugging: Check if contentFunc exists
-            if not self.contentFunc then
-                print("Error: contentFunc is nil for tab '" .. (self:GetText() or "Unknown") .. "'")
-                return
-            end
+                -- Debugging: Check if contentFunc exists
+                if not self.contentFunc then
+                    print("Error: contentFunc is nil for tab '" .. (self:GetText() or "Unknown") .. "'")
+                    return
+                end
 
-            -- Handle specific tabs
-            if self.contentFunc == NagletsToolkitContent then
-                local content = self.contentFunc()
-                MissionAccomplished_UpdateContent(content, true)
-            elseif self.contentFunc == menuTabs[3].contentFunc then  -- Mahler's Armory
-                local content = self.contentFunc()
-                if type(content) == "table" and content.armory then
-                    -- Create a container to hold both the armory and stats.
-                    local container = CreateFrame("Frame", nil, settingsFrame.contentFrame, "BackdropTemplate")
-                    container:SetAllPoints(settingsFrame.contentFrame)
-                    settingsFrame.contentText:Hide()
+                -- Handle specific tabs
+                if self.contentFunc == NagletsToolkitContent then
+                    local content = self.contentFunc()
+                    MissionAccomplished_UpdateContent(content, true)
+                elseif self.contentFunc == menuTabs[3].contentFunc then  -- Mahler's Armory
+                    local content = self.contentFunc()
+                    if type(content) == "table" and content.armory then
+                        -- Create a container to hold both the armory and stats.
+                        local container = CreateFrame("Frame", nil, settingsFrame.contentFrame, "BackdropTemplate")
+                        container:SetAllPoints(settingsFrame.contentFrame)
+                        settingsFrame.contentText:Hide()
 
-                    content.armory:SetParent(container)
-                    content.armory:ClearAllPoints()
-                    content.armory:SetPoint("TOPLEFT", container, "TOPLEFT", 0, 0)
-                    content.armory:Show()
+                        content.armory:SetParent(container)
+                        content.armory:ClearAllPoints()
+                        content.armory:SetPoint("TOPLEFT", container, "TOPLEFT", 0, 0)
+                        content.armory:Show()
 
-                    if content.stats then
-                        content.stats:SetParent(container)
-                        content.stats:ClearAllPoints()
-                        content.stats:SetPoint("TOPLEFT", content.armory, "BOTTOMLEFT", 0, -10)
-                        content.stats:Show()
+                        if content.stats then
+                            content.stats:SetParent(container)
+                            content.stats:ClearAllPoints()
+                            content.stats:SetPoint("TOPLEFT", content.armory, "BOTTOMLEFT", 0, -10)
+                            content.stats:Show()
+                        end
+
+                        MissionAccomplished_UpdateContent(container)
+                    else
+                        MissionAccomplished_UpdateContent(content)
                     end
-
-                    MissionAccomplished_UpdateContent(container)
                 else
+                    local content = self.contentFunc()
                     MissionAccomplished_UpdateContent(content)
                 end
-            else
-                local content = self.contentFunc()
-                MissionAccomplished_UpdateContent(content)
-            end
-        end)
+            end)
+        end
     end
 
     -- Create the content frame

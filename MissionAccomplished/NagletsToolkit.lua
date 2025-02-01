@@ -132,26 +132,26 @@ local function NagletsToolkitContent()
     -- 2) MissionAccomplished Tools
     ----------------------------------------------------------------
     local missionButtons = {
-{ "Reset Combat Data", function()
-    -- Ensure the database exists
-    if not MissionAccomplishedDB then
-        MissionAccomplishedDB = {}
-    end
+        { "Reset Combat Data", function()
+            -- Ensure the database exists
+            if not MissionAccomplishedDB then
+                MissionAccomplishedDB = {}
+            end
 
-    -- Clear all combat-related data
-    MissionAccomplishedDB.lowestHP        = nil
-    MissionAccomplishedDB.highestDamage   = 0
-    MissionAccomplishedDB.totalDamage     = 0
-    MissionAccomplishedDB.totalEnemies    = 0
-    MissionAccomplishedDB.totalCombatTime = 0
-    MissionAccomplishedDB.avgDPS          = 0
-    MissionAccomplishedDB.avgDPM          = 0
-    MissionAccomplishedDB.enemiesPerHour  = 0
+            -- Clear all combat-related data
+            MissionAccomplishedDB.lowestHP        = nil
+            MissionAccomplishedDB.highestDamage   = 0
+            MissionAccomplishedDB.totalDamage     = 0
+            MissionAccomplishedDB.totalEnemies    = 0
+            MissionAccomplishedDB.totalCombatTime = 0
+            MissionAccomplishedDB.avgDPS          = 0
+            MissionAccomplishedDB.avgDPM          = 0
+            MissionAccomplishedDB.enemiesPerHour  = 0
 
-    local msg = "All combat data has been cleared."
-    print("[Naglet's Toolkit] Combat data cleared!")
-    MissionAccomplished.GavrialsCall.DisplayMessage("Combat Data", msg, "Interface\\Icons\\INV_Misc_QuestionMark", {1, 1, 1})
-end },
+            local msg = "All combat data has been cleared."
+            print("[Naglet's Toolkit] Combat data cleared!")
+            MissionAccomplished.GavrialsCall.DisplayMessage("Combat Data", msg, "Interface\\Icons\\INV_Misc_QuestionMark", {1, 1, 1})
+        end },
         { "Test Event Functions", function()
             if not (MissionAccomplished and MissionAccomplished.GavrialsCall) then
                 print("[Naglet's Toolkit] MissionAccomplished.GavrialsCall not found.")
@@ -212,7 +212,12 @@ end },
                 MissionAccomplished.GavrialsCall.DisplayMessage(playerName, noGuildMsg, "Interface\\Icons\\INV_Misc_Token_OrcTroll", {1, 0.2, 0.2})
                 return
             end
-            local result = C_ChatInfo.SendAddonMessage(PREFIX, "Progress:" .. msg, "GUILD")
+            -- Use the SendAddonMessage wrapper with table parameters.
+            MissionAccomplished.GavrialsCall.SendAddonMessage({
+                prefix  = MissionAccomplished.GavrialsCall.PREFIX or "MissionAcc",
+                message = "Progress:" .. msg,
+                channel = "GUILD",
+            })
             print("[Naglet's Toolkit] Sent progress to guild.")
         end },
     }
