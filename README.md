@@ -4,7 +4,7 @@
 
 ![WoW Classic](https://img.shields.io/badge/WoW-Classic-blue) ![Version](https://img.shields.io/badge/Version-1.2-green)  
 **Developer:** RoxyKovu  
-**Compatible with:** World of Warcraft Classic Era (1.14.3)
+**Compatible with:** World of Warcraft Classic 
 
 ---
 
