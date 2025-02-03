@@ -2,14 +2,14 @@
 ## Title: MissionAccomplished
 ## Notes: A comprehensive Hardcore add-on with various enhancements to improve gameplay.
 ## Author: RoxyKovu
-## Version: 1.2
+## Version: 1.3
 
 ## SavedVariables: MissionAccomplishedDB
 
-## Dependencies:
-## (List any actual dependencies here, if needed)
-
-## OptionalDeps: LibDataBroker-1.1, LibDBIcon-1.0, Blizzard_PaperDollFrame
+#------------------------------------
+# Library
+#------------------------------------
+Library/ProfessionLib.lua
 
 #------------------------------------
 # AddOn Core / Modules
@@ -23,6 +23,7 @@ NagletsToolkit.lua
 Armory.lua
 Stats.lua
 Guild.lua
+Modules/DatabaseBuild/DatabaseBuild.lua
 
 #------------------------------------
 # UI / Settings

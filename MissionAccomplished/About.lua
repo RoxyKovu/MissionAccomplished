@@ -1,5 +1,7 @@
+--------------------------------------------------
 -- About.lua
 -- This file defines the content for the "About" tab with enhanced visuals and adjustments for size and greater transparency.
+--------------------------------------------------
 
 local function AboutContent()
     -- Create the parent frame for the "About" content
@@ -37,7 +39,7 @@ local function AboutContent()
     body:SetPoint("TOP", subtitle, "BOTTOM", 0, -20)
     body:SetWidth(aboutFrame:GetWidth() * 0.9) -- Limit text width for readability
     body:SetJustifyH("LEFT")
-    body:SetText([[
+    body:SetText([[ 
 Welcome, adventurer! Thank you for checking out **MissionAccomplished**, a humble project created by someone who just loves games and wants others to enjoy them even more.
 
 At |cff00ff00RoxyKovu|r, our philosophy is simple: games are more than just entertainment—they’re adventures, connections, and stories waiting to unfold. MissionAccomplished was born out of this love for gaming, with the goal of making every journey in Azeroth even more memorable.
@@ -49,7 +51,32 @@ Your feedback and support mean the world to us. If you have suggestions or ideas
 Thank you for being part of this journey. See you out there, champion!
     ]])
 
-    -- Return the frame so it integrates properly
+    ---------------------------------------------------------------------
+    -- Add Global Addon Users Count at the Bottom of the About Tab
+    ---------------------------------------------------------------------
+    local userCountFrame = CreateFrame("Frame", nil, aboutFrame)
+    userCountFrame:SetSize(120, 20)
+    userCountFrame:SetPoint("BOTTOM", aboutFrame, "BOTTOM", 0, 10)
+
+    -- Create a small icon (using a group-looking icon as an example)
+    local userIcon = userCountFrame:CreateTexture(nil, "OVERLAY")
+    userIcon:SetSize(16, 16)
+    userIcon:SetPoint("LEFT", userCountFrame, "LEFT", 0, 0)
+    userIcon:SetTexture("Interface\\Icons\\INV_Misc_GroupLooking")
+
+    -- Create a FontString to show the count
+    local userCountText = userCountFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    userCountText:SetPoint("LEFT", userIcon, "RIGHT", 5, 0)
+    userCountText:SetText("Addon Users: ?")
+
+    -- Request the global online users count and update the text.
+    if MissionAccomplished.RequestGlobalOnlineUsers then
+        MissionAccomplished.RequestGlobalOnlineUsers(function(count)
+            userCountText:SetText("Addon Users: " .. count)
+        end)
+    end
+
+    -- Return the frame so it integrates properly with your settings UI.
     return aboutFrame
 end
 

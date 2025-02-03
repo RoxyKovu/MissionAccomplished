@@ -54,15 +54,10 @@ openSettingsBtn:SetSize(160, 30)
 openSettingsBtn:SetPoint("TOPLEFT", devLogo, "BOTTOMLEFT", 0, -10)  -- Adjusted position
 openSettingsBtn:SetText("Open Settings")
 
--- Button Click: Close WoW UI and Open Settings
+-- Button Click: Close all standard Blizzard UI panels and Open the Addon Settings
 openSettingsBtn:SetScript("OnClick", function()
-    -- Completely Close the WoW Main Menu
-    if GameMenuFrame:IsShown() then
-        ToggleGameMenu()  -- Pressing Escape Effect
-    end
-
-    -- Also Close Interface Options if Open
-    HideUIPanel(InterfaceOptionsFrame)
+    -- Close all open Blizzard UI panels (GameMenu, Interface Options, etc.)
+    CloseAllWindows()
 
     -- Open the Addon Settings
     if MissionAccomplished_ToggleSettings and type(MissionAccomplished_ToggleSettings) == "function" then

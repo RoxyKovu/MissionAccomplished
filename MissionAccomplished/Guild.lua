@@ -125,6 +125,30 @@ end
 local trophySymbol = "|TInterface\\Icons\\spell_holy_spellwarding:16:16:0:0|t"
 
 --------------------------------------------------
+-- Helper: Get Profession Icon using WoW Icon Database
+--------------------------------------------------
+local function GetProfessionIcon(profName)
+    local iconMapping = {
+        ["Blacksmithing"] = "trade_blacksmithing",
+        ["Leatherworking"] = "trade_leatherworking",
+        ["Alchemy"]        = "trade_alchemy",
+        ["Herbalism"]      = "spell_nature_naturetouchgrow",
+        ["Mining"]         = "trade_mining",
+        ["Engineering"]    = "trade_engineering",
+        ["Enchanting"]     = "trade_engraving",
+        ["Tailoring"]      = "trade_tailoring",
+        ["Skinning"]       = "inv_misc_pelt_wolf_01",
+        ["Jewelcrafting"]  = "inv_misc_gem_01",
+        ["Inscription"]    = "inv_inscription_tradeskill01",
+        ["Cooking"]        = "inv_misc_food_15",
+        ["First Aid"]      = "Spell_holy_sealofsacrifice",
+        ["Fishing"]        = "trade_fishing",
+    }
+    local iconName = iconMapping[profName] or "INV_Misc_QuestionMark"
+    return string.format("|TInterface\\Icons\\%s:12:12:0:0|t", iconName)
+end
+
+--------------------------------------------------
 -- Main Guild Functions Content
 --------------------------------------------------
 local function GuildFunctionsContent()
@@ -190,10 +214,12 @@ local function GuildFunctionsContent()
             local name, _, _, level, class, zone, note, officerNote, online = GetGuildRosterInfo(i)
             local cleanName = CleanName(name)
             local progress = nil
+            local professions = nil
             if _G.MissionAccomplished_GuildAddonMembers then
                 for _, addonData in ipairs(_G.MissionAccomplished_GuildAddonMembers) do
                     if CleanName(addonData.name):lower() == cleanName:lower() then
                         progress = addonData.progress
+                        professions = addonData.professions
                         break
                     end
                 end
@@ -203,7 +229,8 @@ local function GuildFunctionsContent()
                 race = "Unknown",  -- Classic doesn't reliably provide race info.
                 class = class or "Unknown",
                 level = level or 1,
-                progress = progress
+                progress = progress,
+                professions = professions,
             }
             if online then
                 table.insert(onlineMembers, memberData)
@@ -217,7 +244,8 @@ local function GuildFunctionsContent()
             race = UnitRace("player") or "Unknown",
             class = select(1, UnitClass("player")) or "Unknown",
             level = UnitLevel("player") or 1,
-            progress = MissionAccomplished.GetProgressPercentage() or 0
+            progress = MissionAccomplished.GetProgressPercentage() or 0,
+            professions = nil,
         })
     end
 
@@ -228,8 +256,38 @@ local function GuildFunctionsContent()
         race = UnitRace("player") or "Unknown",
         class = select(1, UnitClass("player")) or "Unknown",
         level = UnitLevel("player") or 1,
-        progress = MissionAccomplished.GetProgressPercentage() or 0
+        progress = MissionAccomplished.GetProgressPercentage() or 0,
+        professions = nil,
     }
+    -- Update selfData with our profession info from the external library
+    if RoxyKovusProfLib then
+        local p1, p2, fishing, cooking, firstAid = RoxyKovusProfLib:GetProfessions()
+        local profData = {}
+        if p1 then
+            local info = RoxyKovusProfLib:GetProfessionInfo(p1)
+            if info then profData[info.name] = { level = info.level, max = info.maxLevel, icon = GetProfessionIcon(info.name) } end
+        end
+        if p2 then
+            local info = RoxyKovusProfLib:GetProfessionInfo(p2)
+            if info then profData[info.name] = { level = info.level, max = info.maxLevel, icon = GetProfessionIcon(info.name) } end
+        end
+        if fishing then
+            local info = RoxyKovusProfLib:GetProfessionInfo(fishing)
+            if info then profData[info.name] = { level = info.level, max = info.maxLevel, icon = GetProfessionIcon(info.name) } end
+        end
+        if cooking then
+            local info = RoxyKovusProfLib:GetProfessionInfo(cooking)
+            if info then profData[info.name] = { level = info.level, max = info.maxLevel, icon = GetProfessionIcon(info.name) } end
+        end
+        if firstAid then
+            local info = RoxyKovusProfLib:GetProfessionInfo(firstAid)
+            if info then profData[info.name] = { level = info.level, max = info.maxLevel, icon = GetProfessionIcon(info.name) } end
+        end
+        if next(profData) then
+            selfData.professions = profData
+        end
+    end
+
     local foundSelf = false
     for i, member in ipairs(onlineMembers) do
         if member.name:lower() == selfName:lower() then
@@ -282,7 +340,7 @@ local function GuildFunctionsContent()
     contentFrame:SetHeight(#allMembers * lineHeight)
 
     --------------------------------------------------
-    -- Create a Frame for Each Guild Member
+    -- Create a Frame for Each Guild Member (with hover tooltip)
     --------------------------------------------------
     local allLineFrames = {}
     for i, member in ipairs(allMembers) do
@@ -350,6 +408,33 @@ local function GuildFunctionsContent()
             lf.fs:SetTextColor(0.5, 0.5, 0.5, 0.8)
         end
 
+        -- Add hover tooltip to each member line:
+        lf:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:ClearLines()
+            GameTooltip:AddLine("|cff00ff00" .. member.name .. "|r")
+            GameTooltip:AddLine("Level: " .. member.level, 1, 1, 1, false)
+            if member.progress then
+                GameTooltip:AddLine(string.format("Progress: %.1f%%", member.progress), 1, 1, 1, false)
+            end
+            if member.professions then
+                GameTooltip:AddLine("Professions:", 0.8, 0.8, 0.8, false)
+                for prof, info in pairs(member.professions) do
+                    local profIcon = GetProfessionIcon(prof)
+                    GameTooltip:AddLine(profIcon .. " " .. prof .. ": " .. info.level .. "/" .. info.max, 1, 1, 1, false)
+                end
+            else
+                GameTooltip:AddLine("Profession data not communicated", 1, 0.2, 0.2, false)
+            end
+            if member.version then
+                GameTooltip:AddLine("Addon Version: " .. member.version, 0.8, 0.8, 0.8, false)
+            end
+            GameTooltip:Show()
+        end)
+        lf:SetScript("OnLeave", function(self)
+            GameTooltip:Hide()
+        end)
+
         lf:Show()
         allLineFrames[i] = lf
     end
@@ -359,7 +444,6 @@ local function GuildFunctionsContent()
     --------------------------------------------------
     scrollFrame:SetScript("OnVerticalScroll", function(self, offset)
         self:SetVerticalScroll(offset)
-        -- Update scroll thumb position
         FauxScrollFrame_Update(self, #allMembers, math.floor(300/lineHeight), lineHeight)
         for i, lf in ipairs(allLineFrames) do
             local posY = (i-1)*lineHeight - offset
