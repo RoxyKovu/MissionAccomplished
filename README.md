@@ -2,7 +2,7 @@
 
 **A comprehensive Hardcore add-on with various enhancements to improve gameplay.**
 
-![WoW Classic](https://img.shields.io/badge/WoW-Classic-blue) ![Version](https://img.shields.io/badge/Version-1.2-green)  
+![WoW Classic](https://img.shields.io/badge/WoW-Classic-blue) ![Version](https://img.shields.io/badge/Version-1.3-green)  
 **Developer:** RoxyKovu  
 **Compatible with:** World of Warcraft Classic 
 
