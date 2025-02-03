@@ -28,7 +28,6 @@ MissionAccomplished enhances gameplay by tracking key statistics, providing real
 
 - **Gavrial’s Call Notifications**  
   - Custom notification frame with fade-in/fade-out animations and a message queue to display alerts sequentially.  
-  - **New in 1.2:**  
     - **Static Gavicon:** Permanently fixed in the upper left corner of the notification frame (click it to open settings).  
     - **Dynamic Event Icon:** Displays within the frame and updates based on the current event.  
     - Improved tooltip now reads: *"Click the icon in the top left corner to open settings."*
@@ -74,8 +73,7 @@ MissionAccomplished enhances gameplay by tracking key statistics, providing real
 - Custom notification frame with fade-in, display, and fade-out animations.
 - Alerts for low HP warnings, level-ups, XP progress updates, dungeon entry/exit, and guild-wide notifications.
 - Uses a **hidden chat channel ("GavrialcallsHCeventscodes")** for event syncing.
-- **SHIFT+Drag** to reposition the notification frame.
-- **New in 1.2:**  
+- **SHIFT+Drag** to reposition the notification frame. 
   - A **static gavicon** fixed in the upper left corner (click it to open settings).  
   - A **dynamic event icon** that updates within the frame based on the event.  
   - Improved message queue handling to ensure no notification is skipped.
@@ -129,22 +127,6 @@ A settings tab containing useful tools:
 ## 📌 Development Notes
 
 **Developer:** RoxyKovu
-
-### Version 1.2 Enhancements:
-- **Static Gavicon:** Fixed in the upper left corner of the notification frame (click to open settings).
-- **Dynamic Event Icon:** Updates within the notification frame based on events.
-- **Improved Text Layout:** Message text is now offset so it isn’t covered by the icons.
-- **Updated Tooltip:** Now instructs "Click the icon in the top left corner to open settings."
-- Enhanced message queue handling ensures all notifications are displayed sequentially.
-- XP Bar UI positioning and tooltips have been improved.
-- Combat data now updates continuously in the background, ensuring the Armory & Stats Panel always shows current values.
-- All core calculations (XP tracking, combat stats, time played, etc.) are centralized for consistency.
-
-### Version 1.1 Enhancements (Legacy):
-- Added a hidden channel system for event notifications.
-- Improved XP and progress tracking.
-- Overhauled Naglet’s Toolkit with combat reset and test functions.
-- Introduced new UI elements: XP Bar, Notification Panel, and Armory View.
 
 ---
 
