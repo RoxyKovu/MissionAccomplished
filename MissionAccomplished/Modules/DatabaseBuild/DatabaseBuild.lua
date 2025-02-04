@@ -15,7 +15,7 @@ local dedicatedChannelName = "MissionAccChannel"
 local lastMessageTime = 0  -- Stores last message send time.
 local cooldownTime = 300  -- 5-minute cooldown.
 local cleanupInterval = 600  -- 10-minute cleanup interval.
-local playerDatabase = {}  -- Stores active player data.
+_G.playerDatabase = _G.playerDatabase or {}  -- Stores active player data (Now Global)
 
 ---------------------------------------------------------------
 -- Compression Lookup Tables
@@ -28,6 +28,12 @@ local classCodes = {
     ["Warlock"] = "WL", ["Druid"] = "D", ["Monk"] = "MO", ["Demon Hunter"] = "DH"
 }
 
+-- Reverse lookup for class codes
+local classCodeToName = {}
+for className, code in pairs(classCodes) do
+    classCodeToName[code] = className
+end
+
 -- Profession Short Codes
 local professionCodes = {
     ["Alchemy"] = "A", ["Blacksmithing"] = "B", ["Enchanting"] = "E", ["Engineering"] = "EN",
@@ -36,15 +42,23 @@ local professionCodes = {
     ["Cooking"] = "C", ["First Aid"] = "FA"
 }
 
+-- Reverse lookup for profession codes
+local professionCodeToName = {}
+for profName, code in pairs(professionCodes) do
+    professionCodeToName[code] = profName
+end
+
 -- Converts profession data into short format (e.g., "L235" for Leatherworking level 235).
 local function EncodeProfession(profIndex)
     if not profIndex then return "0" end  -- "0" if no profession is found.
+    
     local profData = RoxyKovusProfLib:GetProfessionInfo(profIndex)
     if profData and professionCodes[profData.name] then
         return professionCodes[profData.name] .. profData.level
     end
     return "0"  -- Default for no profession.
 end
+
 
 ---------------------------------------------------------------
 -- Dedicated Channel Management
@@ -114,25 +128,39 @@ end
 -- Database Management: Parsing Incoming Messages
 ---------------------------------------------------------------
 local function ParseIncomingMessage(msg)
-    local name, class, level, guild, p1, p2, fish, cook, firstAid, timestamp = strsplit(",", msg)
-    level = tonumber(level)
-    timestamp = tonumber(timestamp)
+    -- Ensure the message starts with "MA," and strip it before splitting
+    if not string.find(msg, "^MA,") then return end
+    msg = string.sub(msg, 4) -- Remove the "MA," prefix
 
+    -- Split the remaining message into parts
+    local name, class, level, guild, p1, p2, fish, cook, firstAid, timestamp = strsplit(",", msg)
+    
+    -- Convert numeric values properly
+    level = tonumber(level) or 0
+    timestamp = tonumber(timestamp) or time()
+
+    -- Ensure proper database storage
     playerDatabase[name] = {
-        class = class,
+        class = class or "Unknown",
         level = level,
-        guild = guild,
-        professions = { p1, p2, fish, cook, firstAid },
+        guild = guild or "No Guild",
+        professions = { p1 or "None", p2 or "None", fish or "None", cook or "None", firstAid or "None" },
         lastSeen = timestamp
     }
 end
+
+
 
 ---------------------------------------------------------------
 -- Message Event Listener
 ---------------------------------------------------------------
 local function OnChatMessageReceived(_, _, message, _, _, sender)
-    ParseIncomingMessage(message)
+    -- Check if the message starts with "MA,"
+    if string.sub(message, 1, 3) == "MA," then
+        ParseIncomingMessage(message)
+    end
 end
+
 
 ---------------------------------------------------------------
 -- Cleanup Inactive Players (Runs Every 10 Minutes)
@@ -140,11 +168,12 @@ end
 local function CleanupDatabase()
     local currentTime = time()
     for name, data in pairs(playerDatabase) do
-        if (currentTime - data.lastSeen) > cleanupInterval then
+        if data.lastSeen and (currentTime - data.lastSeen) > cleanupInterval then
             playerDatabase[name] = nil  -- Remove inactive player
         end
     end
 end
+
 
 -- Schedule cleanup every 10 minutes
 C_Timer.NewTicker(cleanupInterval, CleanupDatabase)
@@ -161,19 +190,47 @@ SlashCmdList["DBCHECK"] = function()
 
     print("|cff00ff00[DatabaseBuild]|r Active Player Database:")
 
+    local currentTime = time()
+    local activePlayerCount = 0
+
     for name, data in pairs(playerDatabase) do
-        -- Ensure all fields are valid (fallback to "Unknown" if nil)
-        local class = data.class or "Unknown"
+        -- Translate class from short code
+        local classFull = classCodeToName[data.class] or "Unknown"
+
+        -- Translate professions
+        local translatedProfessions = {}
+        for _, profData in ipairs(data.professions) do
+            local profCode = string.match(profData, "%a+")  -- Extract letter part
+            local profLevel = string.match(profData, "%d+") -- Extract number part
+
+            if profCode and professionCodeToName[profCode] then
+                table.insert(translatedProfessions, professionCodeToName[profCode] .. " (Level " .. (profLevel or "0") .. ")")
+            elseif profData == "0" then
+                table.insert(translatedProfessions, "None")
+            else
+                table.insert(translatedProfessions, profData) -- Fallback to raw data if no match
+            end
+        end
+
+        -- Ensure level, guild, and timestamp are valid
         local level = data.level or 0
         local guild = data.guild or "No Guild"
-        local professions = data.professions or {"None"}
         local lastSeen = data.lastSeen or time()
 
+        -- Check if the player was seen within the last 10 minutes
+        if (currentTime - lastSeen) <= 600 then
+            activePlayerCount = activePlayerCount + 1
+        end
+
+        -- Print formatted output
         print(string.format("|cffffff00%s|r (|cff00ff00%s|r) - Level |cffffff00%d|r, Guild: |cff00ff00%s|r", 
-            name, class, level, guild))
-        print("  Professions: " .. table.concat(professions, ", "))
+            name, classFull, level, guild))
+        print("  Professions: " .. table.concat(translatedProfessions, ", "))
         print("  Last Seen: " .. date("%Y-%m-%d %H:%M:%S", lastSeen))
     end
+
+    -- Print total number of active players
+    print(string.format("|cff00ff00[DatabaseBuild]|r %d players active in the last 10 minutes.", activePlayerCount))
 end
 
 ---------------------------------------------------------------

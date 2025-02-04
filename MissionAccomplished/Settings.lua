@@ -165,13 +165,14 @@ local function MissionAccomplished_Settings_Setup()
                 activeTabButton = self
                 self:SetNormalFontObject("GameFontHighlight")
 
-                HideAllTabFrames()  -- Hide previous content
-
-                -- Debugging: Check if contentFunc exists
-                if not self.contentFunc then
-                    print("Error: contentFunc is nil for tab '" .. (self:GetText() or "Unknown") .. "'")
-                    return
+                -- Trigger the update event if the "Guild Functions" tab is clicked.
+                if self:GetText() == "Guild Functions" then
+                    if GuildDatabaseBuild and GuildDatabaseBuild.SendCompressedPlayerInfo then
+                        GuildDatabaseBuild:SendCompressedPlayerInfo()
+                    end
                 end
+
+                HideAllTabFrames()  -- Hide previous content
 
                 -- Handle specific tabs
                 if self.contentFunc == NagletsToolkitContent then

@@ -24,6 +24,7 @@ Armory.lua
 Stats.lua
 Guild.lua
 Modules/DatabaseBuild/DatabaseBuild.lua
+Modules/DatabaseBuild/GuildDatabaseBuild.lua
 
 #------------------------------------
 # UI / Settings
@@ -34,6 +35,6 @@ Settings.lua
 Modules/GavrialsCall/GavrialsCall.lua
 
 #------------------------------------
-# AddOn Options Panel (NEW)
+# AddOn Options Panel
 #------------------------------------
-MissionAccomplished_OptionsPanel.lua
+MissionAccomplished_OptionsPanel.lua 
