@@ -1,147 +1,86 @@
-# MissionAccomplished
+MissionAccomplished
+A comprehensive Hardcore add-on designed to enhance gameplay with detailed tracking, notifications, and quality-of-life tools.
 
-**A comprehensive Hardcore add-on with various enhancements to improve gameplay.**
 
-![WoW Classic](https://img.shields.io/badge/WoW-Classic-blue) ![Version](https://img.shields.io/badge/Version-1.4-blue)  
-**Developer:** RoxyKovu  
-**Compatible with:** World of Warcraft Classic 
+Developer: RoxyKovu
+Compatible with: World of Warcraft Classic
 
----
+About MissionAccomplished
+MissionAccomplished is a feature-packed add-on for Hardcore players in World of Warcraft Classic. Whether you’re focused on XP tracking, combat statistics, or critical event notifications, this add-on ensures you stay informed and prepared on your journey to level 60. Designed to enhance your Hardcore experience, MissionAccomplished provides intuitive tools to help you survive, thrive, and conquer.
 
-## 🚀 Overview
+UI Features
+Movable XP Bar:
+Displays your exact XP percentage and remaining XP near your PlayerFrame. Reposition it easily with SHIFT+Drag. Click the icon for quick access to settings.
 
-MissionAccomplished enhances gameplay by tracking key statistics, providing real-time notifications, and offering quality-of-life features for Hardcore mode. Whether you're monitoring your XP efficiency, tracking key combat stats, or receiving critical alerts, MissionAccomplished ensures you stay informed and prepared on your journey to level 60.
+Event Box Notifications:
+Get real-time, customizable alerts for critical events like low HP, level-ups, dungeon entries, and guild-wide updates. Notifications feature dynamic icons in a semi-transparent frame, with queued messages ensuring no alerts are missed.
 
----
+Naglet’s Toolkit (Utility Panel):
+Includes essential tools like ready checks, dice rolls, timers, raid mark clearing, UI reload, cache clearing, FPS monitoring, and screenshot capture.
 
-## 🔥 Key Features
+Armory & Stats Panel:
+View detailed character stats and combat performance via Mahler’s Armory. Combat data updates in the background for instant access when the panel is opened.
 
-- **Advanced XP Tracking**  
-  - Monitor XP progress, XP/hour, and total XP gained.  
-  - Estimate time to level 60 based on your progression rate.  
-  - Centralized calculations via the Core module ensure consistency across all features.
+Custom UI Integration & Controls:
+Fully customizable UI elements with intuitive SHIFT+Drag repositioning. Access settings via slash commands (/macomp) or dedicated icons on the XP bar and notification frames.
 
-- **Movable XP Bar**  
-  - A custom XP bar positioned near the PlayerFrame displaying precise XP percentage and remaining XP.  
-  - Easily reposition via **SHIFT+Drag**.  
-  - Click the Gavrial icon to open settings.
+TradeUI:
+A powerful tooltip feature for in-game trade interactions. Hover over guild members and add-on users to instantly see their primary and secondary professions, helping you easily find the right player for crafting, gathering, and other profession needs.
 
-- **Gavrial’s Call Notifications**  
-  - Custom notification frame with fade-in/fade-out animations and a message queue to display alerts sequentially.  
-    - **Static Gavicon:** Permanently fixed in the upper left corner of the notification frame (click it to open settings).  
-    - **Dynamic Event Icon:** Displays within the frame and updates based on the current event.  
-    - Improved tooltip now reads: *"Click the icon in the top left corner to open settings."*
+Features & Functionality
+Advanced XP Tracking:
+Track XP progress, XP/hour, and total XP gained. Estimates your time to level 60 based on current progression, with both in-session and cumulative tracking managed centrally by the Core module for consistent calculations.
 
-- **Naglet’s Toolkit (Utility Panel)**  
-  - In-Game Tools: Ready Check, Roll, 10s Timer, Clear Marks.  
-  - MissionAccomplished Tools: Reset Combat Data, Test Event Functions.  
-  - System Tools: Reload UI, Clear Cache, Show FPS, and Take Screenshot.  
-  - **Note:** Combat data is continuously updated in the background so that the Armory & Stats Panel always shows current values.
+Event Box Notifications:
+Real-time alerts for key events, including dynamic icons and customizable notifications. Incoming messages are queued to ensure you never miss an alert, and quick access is available via the corner icon.
 
-- **Armory & Stats Panel**  
-  - Displays detailed character statistics and combat performance through Mahler’s Armory.  
-  - Continuously updated combat data—even when the panel was previously closed.
+Naglet’s Toolkit:
+A utility panel offering essential in-game tools like ready checks, dice rolls, timers, raid mark clearing, and system utilities such as UI reload, cache clearing, FPS monitoring, and screenshot capture.
 
-- **Customizable Notifications**  
-  - Guild-wide alerts for low HP warnings, player deaths, dungeon entries/exits, and level-ups.  
-  - Uses a hidden chat channel for secure event syncing.  
-  - All UI elements are repositionable via **SHIFT+Drag**.
+Armory & Stats Panel:
+Display your character’s stats and combat performance through Mahler’s Armory with real-time updates. Easily accessible for quick insight into combat data.
 
-- **Centralized Calculations**  
-  - All core calculations (XP, combat stats, time played, etc.) are handled in one central Core module, ensuring consistent data across the add-on.
+Guild-Wide Alerts:
+Automatically broadcasts key events such as low HP warnings, player deaths, dungeon transitions, and level-up milestones to your guild, enabling fast responses. Delivered securely via a hidden chat channel for add-on users only.
 
----
+Guild Functions Section:
 
-## 📥 Installation
+Guild Member List: A comprehensive, scrollable list showing race, class, level, and add-on progress.
+Professions Tracking: View guild members’ primary and secondary professions, including skill levels.
+Statistics Panel: Displays class counts and guild composition for better management.
+Communication Enhancements: Improved stability and performance of guild-wide chat and member status updates.
+TradeUI:
+A convenient tooltip integration for easy profession tracking. Hover over guild members and add-on users to view their primary and secondary professions, simplifying the process of finding help for crafting, gathering, and other in-game services.
 
-1. **Download** the latest release from GitHub.
-2. **Extract** the `MissionAccomplished` folder into:  
-   `World of Warcraft/_classic_/Interface/AddOns/`
-3. **Restart WoW** or type `/reload` in-game.
+Installation
+CurseForge:
+Download and install via CurseForge for automatic updates.
 
----
+Manual Installation:
+Download the MissionAccomplished folder.
+Extract it into your World of Warcraft Classic add-ons directory: World of Warcraft/_classic_/Interface/AddOns/
+Restart WoW or type /reload in the chat to refresh the UI.
+Access the add-on settings via /macomp or by clicking the icon on the XP bar.
+Features & Functionality
+Real-Time Notifications:
+Event Box Notifications provide real-time alerts for critical events like low HP, level-ups, dungeon entries, and more, with dynamic icons and tailored messages.
 
-## 🔧 Features & Usage
+Persistent and Queued Messaging:
+Critical messages are queued and displayed sequentially, ensuring you never miss important alerts—even during rapid event chains.
 
-### 1. XP & Level Tracking
-- Calculates total XP gained and XP required to reach level 60.
-- Displays XP per hour and estimated time remaining to level 60.
-- Tracks combat XP per hour and enemies killed per hour.
-- Shows total playtime and projected grind time.
+Consistent Calculations:
+All XP, combat, and time tracking are centrally managed by the Core module, maintaining consistent calculations across the entire add-on (including Armory, Event Box Notifications, Naglet’s Toolkit, etc.).
 
-### 2. Gavrial’s Call (Notification System)
-- Custom notification frame with fade-in, display, and fade-out animations.
-- Alerts for low HP warnings, level-ups, XP progress updates, dungeon entry/exit, and guild-wide notifications.
-- Uses a **hidden chat channel ("GavrialcallsHCeventscodes")** for event syncing.
-- **SHIFT+Drag** to reposition the notification frame. 
-  - A **static gavicon** fixed in the upper left corner (click it to open settings).  
-  - A **dynamic event icon** that updates within the frame based on the event.  
-  - Improved message queue handling to ensure no notification is skipped.
+Customizable UI:
+Fully customizable UI elements with SHIFT+Drag repositioning. Access settings quickly using slash commands or dedicated UI icons.
 
-### 3. XP Bar
-- Custom XP bar positioned near the PlayerFrame.
-- **SHIFT+Drag** to reposition.
-- Displays percentage completion and remaining XP.
-- Click the **Gavrial icon** to open settings.
+Slash Commands
+/macomp - Open the MissionAccomplished settings panel.
+Upcoming Features
+Gear & Equipment Analysis: Enhanced item tracking and comparison features.
+BankAlt Section: New interface for managing bank alts and their items.
+Feedback & Support
+Have suggestions, feedback, or found a bug?
+Contact RoxyKovu or submit your feedback via CurseForge. Your support helps improve MissionAccomplished for the Hardcore community!
 
-### 4. Naglet’s Toolkit
-A settings tab containing useful tools:
-- **In-Game Tools:** Ready Check, Roll, 10s Timer, Clear Marks.
-- **MissionAccomplished Tools:** Reset Combat Data, Test Event Functions.
-- **System Tools:** Reload UI, Clear Cache, Show FPS, Take Screenshot.
-
-### 5. Armory & Stats Panel
-- Displays detailed character statistics and combat performance.
-- Integrated **Mahler's Armory** view that always shows the latest data.
-
-### 6. Customizable Notifications
-- Guild-wide alerts for low HP warnings, player deaths, dungeon transitions, and level-ups.
-- Uses a hidden chat channel for secure event syncing.
-- Fully repositionable via **SHIFT+Drag**.
-- Quick access to settings via slash commands or by clicking dedicated icons.
-
----
-
-## ⌨️ Commands
-
-| Command                  | Function                                         |
-|--------------------------|--------------------------------------------------|
-| `/maopts`                | Opens the add-on settings panel                  |
-| `/macomp`                | Opens the MissionAccomplished settings window    |           
-
----
-
-## 🎯 Moving UI Elements
-
-- **Gavrial’s Call Notification:**  
-  Use **SHIFT+Drag** to reposition the notification frame.
-  
-- **XP Bar:**  
-  Use **SHIFT+Drag** to reposition the XP bar.
-  
-- **Settings Panel:**  
-  Access via the **Minimap Icon**, **Nameplate Icon**, or type **/maopts**.
-
----
-
-## 📌 Development Notes
-
-**Developer:** RoxyKovu
-
----
-
-## 🔮 Planned Features
-- Player BankAlt Features.
-- Advanced Guild Notifications (more robust event tracking).
-- Additional Customization Options (frame positions, sound alerts, etc.).
-
----
-
-## 🤝 Support & Feedback
-
-Found a bug or have an idea for improvement?  
-Reach out to **RoxyKovu** in the Hardcore community or submit an issue on the project's [GitHub page](https://github.com/RoxyKovu).
-
----
-
-Enhance your Hardcore WoW Classic experience—Download MissionAccomplished 1.2 today!
+🔥 Enhance your Hardcore WoW Classic experience—Download MissionAccomplished today! 🔥
