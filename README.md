@@ -1,86 +1,114 @@
-MissionAccomplished
-A comprehensive Hardcore add-on designed to enhance gameplay with detailed tracking, notifications, and quality-of-life tools.
+# MissionAccomplished
 
+**A comprehensive Hardcore add-on designed to enhance gameplay with detailed tracking, notifications, and quality-of-life tools.**
 
-Developer: RoxyKovu
-Compatible with: World of Warcraft Classic
+![WoW Classic](https://img.shields.io/badge/WoW-Classic-blue) ![Version](https://img.shields.io/badge/Version-1.4-blue)  
+**Developer:** RoxyKovu  
+**Compatible with:** World of Warcraft Classic
 
-About MissionAccomplished
-MissionAccomplished is a feature-packed add-on for Hardcore players in World of Warcraft Classic. Whether you’re focused on XP tracking, combat statistics, or critical event notifications, this add-on ensures you stay informed and prepared on your journey to level 60. Designed to enhance your Hardcore experience, MissionAccomplished provides intuitive tools to help you survive, thrive, and conquer.
+---
 
-UI Features
-Movable XP Bar:
-Displays your exact XP percentage and remaining XP near your PlayerFrame. Reposition it easily with SHIFT+Drag. Click the icon for quick access to settings.
+## About MissionAccomplished
 
-Event Box Notifications:
-Get real-time, customizable alerts for critical events like low HP, level-ups, dungeon entries, and guild-wide updates. Notifications feature dynamic icons in a semi-transparent frame, with queued messages ensuring no alerts are missed.
+MissionAccomplished is the **ultimate Hardcore gameplay enhancement add-on** for WoW Classic, designed specifically for players committed to surviving the toughest challenges. Whether you're tracking your XP efficiency, monitoring critical combat stats, or receiving timely alerts for key events, **MissionAccomplished** ensures you're always prepared for what lies ahead on your path to level 60.
 
-Naglet’s Toolkit (Utility Panel):
-Includes essential tools like ready checks, dice rolls, timers, raid mark clearing, UI reload, cache clearing, FPS monitoring, and screenshot capture.
+This add-on gives you the tools to stay **organized**, **informed**, and **efficient**, making every moment of your Hardcore journey count.
 
-Armory & Stats Panel:
-View detailed character stats and combat performance via Mahler’s Armory. Combat data updates in the background for instant access when the panel is opened.
+---
 
-Custom UI Integration & Controls:
-Fully customizable UI elements with intuitive SHIFT+Drag repositioning. Access settings via slash commands (/macomp) or dedicated icons on the XP bar and notification frames.
+## UI Features
 
-TradeUI:
-A powerful tooltip feature for in-game trade interactions. Hover over guild members and add-on users to instantly see their primary and secondary professions, helping you easily find the right player for crafting, gathering, and other profession needs.
+### 🎮 **Movable XP Bar**  
+A sleek, custom XP bar that **displays your exact XP percentage** and remaining XP near your PlayerFrame. Easily **reposition** it with **SHIFT+Drag**. For quick access to settings, simply click the **Gavrial icon**. 
 
-Features & Functionality
-Advanced XP Tracking:
-Track XP progress, XP/hour, and total XP gained. Estimates your time to level 60 based on current progression, with both in-session and cumulative tracking managed centrally by the Core module for consistent calculations.
+### ⚡ **Event Box Notifications**  
+Never miss a critical event again! **Real-time, customizable alerts** will notify you about events like **low HP**, **level-ups**, **dungeon entries**, and **guild-wide activities**. With **dynamic icons** and a **semi-transparent frame**, your notifications are sleek, organized, and easy to follow. Plus, incoming messages are queued so no alert is ever missed.
 
-Event Box Notifications:
-Real-time alerts for key events, including dynamic icons and customizable notifications. Incoming messages are queued to ensure you never miss an alert, and quick access is available via the corner icon.
+### 🔧 **Naglet’s Toolkit (Utility Panel)**  
+Essential tools to make your Hardcore experience smoother. Includes:
+- **Ready checks** for groups.
+- **Dice rolls** for fun or decision-making.
+- **Timers** for important events.
+- **Raid mark clearing** and much more!
+  
+Also features **system utilities** like **UI reload**, **cache clearing**, **FPS monitoring**, and **screenshot capture**, making your life easier when you need it most.
 
-Naglet’s Toolkit:
-A utility panel offering essential in-game tools like ready checks, dice rolls, timers, raid mark clearing, and system utilities such as UI reload, cache clearing, FPS monitoring, and screenshot capture.
+### 🛡 **Armory & Stats Panel**  
+View your **character stats** and **combat performance** with real-time updates via **Mahler’s Armory**. Access it instantly to see up-to-date combat data whenever you need it.
 
-Armory & Stats Panel:
-Display your character’s stats and combat performance through Mahler’s Armory with real-time updates. Easily accessible for quick insight into combat data.
+### 🖌 **Custom UI Integration & Controls**  
+Enjoy **full customization** with **SHIFT+Drag** controls, allowing you to reposition UI elements freely. **Slash commands** (/macomp) or icons on the XP bar and notification frame give you quick access to settings.
 
-Guild-Wide Alerts:
-Automatically broadcasts key events such as low HP warnings, player deaths, dungeon transitions, and level-up milestones to your guild, enabling fast responses. Delivered securely via a hidden chat channel for add-on users only.
+### 💎 **TradeUI**  
+A **powerful tooltip feature** that enhances the in-game trade UI. Hover over guild members or add-on users to instantly view their **primary and secondary professions**, helping you find the right player to assist with crafting, gathering, and other profession needs. 
 
-Guild Functions Section:
+---
 
-Guild Member List: A comprehensive, scrollable list showing race, class, level, and add-on progress.
-Professions Tracking: View guild members’ primary and secondary professions, including skill levels.
-Statistics Panel: Displays class counts and guild composition for better management.
-Communication Enhancements: Improved stability and performance of guild-wide chat and member status updates.
-TradeUI:
-A convenient tooltip integration for easy profession tracking. Hover over guild members and add-on users to view their primary and secondary professions, simplifying the process of finding help for crafting, gathering, and other in-game services.
+## Features & Functionality
 
-Installation
-CurseForge:
-Download and install via CurseForge for automatic updates.
+### 💯 **Advanced XP Tracking**  
+- **Monitor your XP progress** and track your **XP/hour** and **total XP gained**.  
+- **Estimate time to level 60** based on your current progression.  
+- **Cumulative tracking** ensures consistency, handled centrally by the **Core module**.
 
-Manual Installation:
-Download the MissionAccomplished folder.
-Extract it into your World of Warcraft Classic add-ons directory: World of Warcraft/_classic_/Interface/AddOns/
-Restart WoW or type /reload in the chat to refresh the UI.
-Access the add-on settings via /macomp or by clicking the icon on the XP bar.
-Features & Functionality
-Real-Time Notifications:
-Event Box Notifications provide real-time alerts for critical events like low HP, level-ups, dungeon entries, and more, with dynamic icons and tailored messages.
+### 🔔 **Event Box Notifications**  
+- **Real-time alerts** for key events with **dynamic icons** and **customizable notifications**.  
+- A **queue system** guarantees no important alert is missed, even when multiple events happen in quick succession.
 
-Persistent and Queued Messaging:
-Critical messages are queued and displayed sequentially, ensuring you never miss important alerts—even during rapid event chains.
+### 🔧 **Naglet’s Toolkit**  
+- Access a suite of essential in-game tools like **ready checks**, **dice rolls**, **timers**, **raid mark clearing**, and system utilities (UI reload, FPS monitoring, cache clearing, screenshot capture).
 
-Consistent Calculations:
-All XP, combat, and time tracking are centrally managed by the Core module, maintaining consistent calculations across the entire add-on (including Armory, Event Box Notifications, Naglet’s Toolkit, etc.).
+### 📊 **Armory & Stats Panel**  
+- View detailed **combat performance** and **character stats** through **Mahler’s Armory** with real-time updates.  
+- Accessible instantly for on-the-fly analysis of combat data.
 
-Customizable UI:
-Fully customizable UI elements with SHIFT+Drag repositioning. Access settings quickly using slash commands or dedicated UI icons.
+### 🛡 **Guild-Wide Alerts**  
+- **Broadcast key events** like **low HP warnings**, **player deaths**, **dungeon transitions**, and **level-up milestones**.  
+- Alerts are delivered securely via a **hidden chat channel**, ensuring only add-on users receive them.
 
-Slash Commands
-/macomp - Open the MissionAccomplished settings panel.
-Upcoming Features
-Gear & Equipment Analysis: Enhanced item tracking and comparison features.
-BankAlt Section: New interface for managing bank alts and their items.
-Feedback & Support
-Have suggestions, feedback, or found a bug?
-Contact RoxyKovu or submit your feedback via CurseForge. Your support helps improve MissionAccomplished for the Hardcore community!
+### ⚔️ **Guild Functions Section**  
+- **Guild Member List**: View a **comprehensive list** of guild members with their race, class, level, and add-on progress.
+- **Professions Tracking**: **Track primary and secondary professions** with skill levels for all members.
+- **Statistics Panel**: See **class counts** and **guild composition** for easier management.
+- **Communication Enhancements**: Improve **guild communication** speed and stability, including member status and chat performance.
 
-🔥 Enhance your Hardcore WoW Classic experience—Download MissionAccomplished today! 🔥
+### 💼 **TradeUI**  
+- **Convenient Tooltip**: Hover over guild members and add-on users to see their professions, helping you quickly identify who can assist with crafting, gathering, or other in-game services. It’s an essential tool for **streamlining** profession-related interactions.
+
+---
+
+## Installation
+
+### ⚙️ **CurseForge:**
+For **automatic updates**, download and install via [CurseForge](https://www.curseforge.com/wow/addons/missionaccomplished).
+
+### 📂 **Manual Installation:**
+1. Download the **MissionAccomplished** folder.
+2. Extract it into your World of Warcraft Classic add-ons directory:
+   `World of Warcraft/_classic_/Interface/AddOns/`
+3. **Restart WoW** or type `/reload` in the chat to refresh the UI.
+4. Access the settings via `/maopts` or by clicking the icon on the XP bar.
+
+---
+
+## Slash Commands
+
+- `/macomp` - Open the **MissionAccomplished** settings panel.
+
+---
+
+## Upcoming Features
+
+- **Gear & Equipment Analysis**: Improved tracking and item comparisons for your gear.
+- **BankAlt Section**: A dedicated section to manage and organize your **bank alts**.
+
+---
+
+## Feedback & Support
+
+Have **suggestions**, **feedback**, or found a **bug**?  
+Contact **RoxyKovu** or submit your feedback via [CurseForge](https://www.curseforge.com/wow/addons/missionaccomplished). Your support helps make **MissionAccomplished** even better for the Hardcore community!
+
+---
+
+🔥 **Enhance your Hardcore WoW Classic experience—Download MissionAccomplished today!** 🔥
