@@ -87,7 +87,7 @@ For **automatic updates**, download and install via [CurseForge](https://www.cur
 2. Extract it into your World of Warcraft Classic add-ons directory:
    `World of Warcraft/_classic_/Interface/AddOns/`
 3. **Restart WoW** or type `/reload` in the chat to refresh the UI.
-4. Access the settings via `/maopts` or by clicking the icon on the XP bar.
+4. Access the settings via `/macomp` or by clicking the icon on the XP bar.
 
 ---
 
