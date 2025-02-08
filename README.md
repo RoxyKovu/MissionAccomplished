@@ -2,7 +2,7 @@
 
 **A comprehensive Hardcore add-on designed to enhance gameplay with detailed tracking, notifications, and quality-of-life tools.**
 
-![WoW Classic](https://img.shields.io/badge/WoW-Classic-blue) ![Version](https://img.shields.io/badge/Version-1.4-blue)  
+![WoW Classic](https://img.shields.io/badge/WoW-Classic-blue) ![Version](https://img.shields.io/badge/Version-1.5-blue)  
 **Developer:** RoxyKovu  
 **Compatible with:** World of Warcraft Classic
 
