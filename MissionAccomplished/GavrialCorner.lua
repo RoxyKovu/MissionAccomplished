@@ -136,10 +136,23 @@ function GavrialCornerContent()
     bgTexture:SetDrawLayer("BACKGROUND", -8)
 
     --------------------------------------------------
-    -- 3) Main FontString for Content
+    -- 2.1) Title (Morpheus font, 32pt, outlined, yellow) with gavicon.blp to its left.
+    --------------------------------------------------
+    local title = journeyFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    title:SetPoint("TOP", journeyFrame, "TOP", 10, -10)  -- Slight right offset to make room for the icon.
+    title:SetFont("Fonts\\MORPHEUS.TTF", 32, "OUTLINE")
+    title:SetText("|cffffff00Gavrial' Corner|r")
+
+    local icon = journeyFrame:CreateTexture(nil, "OVERLAY")
+    icon:SetTexture("Interface\\AddOns\\MissionAccomplished\\Contents\\gavicon.blp")
+    icon:SetSize(32, 32)  -- Adjust the size as needed.
+    icon:SetPoint("RIGHT", title, "LEFT", -5, 0)
+
+    --------------------------------------------------
+    -- 3) Main FontString for Content (positioned below the title)
     --------------------------------------------------
     local contentText = journeyFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    contentText:SetPoint("TOPLEFT", 20, -20)
+    contentText:SetPoint("TOPLEFT", 20, -60)  -- Moved down to avoid overlapping the title.
     contentText:SetPoint("BOTTOMRIGHT", -20, 20)
     contentText:SetJustifyH("LEFT")
     contentText:SetJustifyV("TOP")

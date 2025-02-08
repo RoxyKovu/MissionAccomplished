@@ -1,7 +1,3 @@
---------------------------------------------------
--- Guild.lua
---------------------------------------------------
-
 -- DEBUG flag (set to true for debugging prints, false when finished)
 local DEBUG = false
 
@@ -138,7 +134,7 @@ end
 local trophySymbol = "|TInterface\\Icons\\achievement_level_60:16:16:0:0|t"
 
 --------------------------------------------------
--- Helper: Get Profession Icon using WoW Icon Database
+-- Helper: Get Profession Icon
 --------------------------------------------------
 local function GetProfessionIcon(profName)
     local iconMapping = {
@@ -183,6 +179,7 @@ local function GuildFunctionsContent()
     backgroundTexture:SetAlpha(0.1)
     backgroundTexture:SetHorizTile(false)
     backgroundTexture:SetVertTile(false)
+
     local darkMask = frame:CreateTexture(nil, "ARTWORK")
     darkMask:SetAllPoints(frame)
     darkMask:SetColorTexture(0, 0, 0, 0.93)
@@ -202,19 +199,88 @@ local function GuildFunctionsContent()
     title:SetPoint("TOP", frame, "TOP", 0, -10)
     title:SetFont("Fonts\\MORPHEUS.TTF", 32, "OUTLINE")
     title:SetText("|cffcc99FF" .. guildName .. "|r")
-	
-	-- Create a Refresh Button at the Top Right of the Frame
-local refreshButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-refreshButton:SetSize(80, 22)
-refreshButton:SetText("Refresh")
-refreshButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -10, -10)
-refreshButton:SetScript("OnClick", function(self)
-    GuildRoster()  -- Force an update of the guild roster.
-    -- Call the UpdateMemberList function to refresh the member list display.
-    if UpdateMemberList then
-        UpdateMemberList(0)
-    end
-end)
+
+    -- Create a Refresh Button that does the following:
+    -- 1. Updates guild data (calls GuildDatabaseBuild:SendCompressedPlayerInfo() if available)
+    -- 2. Hides previous content and refreshes the Guild Functions tab exactly as if it were pressed.
+    local refreshButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+    refreshButton:SetSize(80, 22)
+    refreshButton:SetText("Refresh")
+    refreshButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -10, -10)
+    refreshButton:SetScript("OnClick", function(self)
+        self:Disable()  -- Disable the button during refresh
+
+        if IsInGuild() then
+            GuildRoster()  -- Force an update of the guild roster
+            if _G.guildPlayerDatabase then
+                local roster = {}
+                local numMembers = GetNumGuildMembers()
+                for i = 1, numMembers do
+                    local fullName = select(1, GetGuildRosterInfo(i))
+                    if fullName then
+                        local baseName = fullName:match("^(.-)%-.+") or fullName
+                        roster[baseName] = true
+                    end
+                end
+                for name, _ in pairs(_G.guildPlayerDatabase) do
+                    if not roster[name] then
+                        _G.guildPlayerDatabase[name] = nil
+                    end
+                end
+            end
+            -- Optional: Update guild data by sending compressed info
+            if GuildDatabaseBuild and GuildDatabaseBuild.SendCompressedPlayerInfo then
+                GuildDatabaseBuild:SendCompressedPlayerInfo()
+            end
+            if DEBUG then print("Guild data refreshed.") end
+        else
+            if DEBUG then print("Not in a guild.") end
+        end
+
+        -- Create or show the progress bar
+        if not frame.refreshProgressBar then
+            local pb = CreateFrame("StatusBar", nil, frame, "BackdropTemplate")
+            pb:SetSize(100, 10)
+            pb:SetPoint("TOPRIGHT", refreshButton, "BOTTOMRIGHT", 0, -5)
+            pb:SetMinMaxValues(0, 1)
+            pb:SetValue(0)
+            pb:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+            pb:SetStatusBarColor(1, 0, 0)  -- Start red
+            frame.refreshProgressBar = pb
+        end
+        local pb = frame.refreshProgressBar
+        pb:SetValue(0)
+        pb:SetStatusBarColor(1, 0, 0)
+        pb:Show()
+
+        local totalRefreshTime = 5  -- Simulated refresh time (seconds)
+        local startTime = GetTime()
+        pb:SetScript("OnUpdate", function(self, elapsed)
+            local progress = (GetTime() - startTime) / totalRefreshTime
+            if progress >= 1 then
+                self:SetValue(1)
+                self:SetStatusBarColor(0, 1, 0)  -- Turn green when complete
+                self:SetScript("OnUpdate", nil)
+                refreshButton:Enable()
+                C_Timer.After(2, function() self:Hide() end)
+
+                -- Mimic the Guild Functions tab press exactly as in Settings.lua:
+                if _G.MissionAccomplished_GuildTabButton and _G.MissionAccomplished_GuildTabButton.Click then
+                    _G.MissionAccomplished_GuildTabButton:Click()
+                elseif _G.MissionAccomplished_UpdateContent and _G.MissionAccomplished_GuildContent then
+                    if _G.SettingsFrameContent and _G.SettingsFrameContent.contentFrame then
+                        for _, child in pairs({_G.SettingsFrameContent.contentFrame:GetChildren()}) do
+                            child:Hide()
+                        end
+                    end
+                    local content = _G.MissionAccomplished_GuildContent()
+                    _G.MissionAccomplished_UpdateContent(content)
+                end
+            else
+                self:SetValue(progress)
+            end
+        end)
+    end)
 
     --------------------------------------------------
     -- Scroll Frame for the Member List
@@ -227,39 +293,37 @@ end)
     contentFrame:SetWidth(440)
     scrollFrame:SetScrollChild(contentFrame)
 
-    -- Built-in Pillar Textures Using "Interface\\Buttons\\WHITE8X8"
-local builtInTexture = "Interface\\Buttons\\WHITE8X8"
+    -- Built-in Pillar Textures
+    local builtInTexture = "Interface\\Buttons\\WHITE8X8"
 
--- Create a frame for the left pillar
-local leftPillarFrame = CreateFrame("Frame", nil, frame)
-leftPillarFrame:SetSize(20, 300)
-leftPillarFrame:SetPoint("RIGHT", scrollFrame, "LEFT", -5, 0)
-leftPillarFrame:SetFrameLevel(scrollFrame:GetFrameLevel() + 5)
--- Create the texture as a child of the pillar frame
-local leftPillar = leftPillarFrame:CreateTexture(nil, "OVERLAY")
-leftPillar:SetAllPoints(leftPillarFrame)
-leftPillar:SetTexture(builtInTexture)
-leftPillar:SetVertexColor(0, 0, 0, 1)  -- Tint completely black
+    -- Left pillar
+    local leftPillarFrame = CreateFrame("Frame", nil, frame)
+    leftPillarFrame:SetSize(20, 300)
+    leftPillarFrame:SetPoint("RIGHT", scrollFrame, "LEFT", -5, 0)
+    leftPillarFrame:SetFrameLevel(scrollFrame:GetFrameLevel() + 5)
+    local leftPillar = leftPillarFrame:CreateTexture(nil, "OVERLAY")
+    leftPillar:SetAllPoints(leftPillarFrame)
+    leftPillar:SetTexture(builtInTexture)
+    leftPillar:SetVertexColor(0, 0, 0, 1)
 
--- Create a frame for the right pillar
-local rightPillarFrame = CreateFrame("Frame", nil, frame)
-rightPillarFrame:SetSize(20, 300)
-rightPillarFrame:SetPoint("LEFT", scrollFrame, "RIGHT", 5, 0)
-rightPillarFrame:SetFrameLevel(scrollFrame:GetFrameLevel() + 5)
-local rightPillar = rightPillarFrame:CreateTexture(nil, "OVERLAY")
-rightPillar:SetAllPoints(rightPillarFrame)
-rightPillar:SetTexture(builtInTexture)
-rightPillar:SetVertexColor(0, 0, 0, 1)
+    -- Right pillar
+    local rightPillarFrame = CreateFrame("Frame", nil, frame)
+    rightPillarFrame:SetSize(20, 300)
+    rightPillarFrame:SetPoint("LEFT", scrollFrame, "RIGHT", 5, 0)
+    rightPillarFrame:SetFrameLevel(scrollFrame:GetFrameLevel() + 5)
+    local rightPillar = rightPillarFrame:CreateTexture(nil, "OVERLAY")
+    rightPillar:SetAllPoints(rightPillarFrame)
+    rightPillar:SetTexture(builtInTexture)
+    rightPillar:SetVertexColor(0, 0, 0, 1)
 
-
-    -- Create a custom slider using UIPanelScrollBarTemplate
+    -- Custom slider
     local customSlider = CreateFrame("Slider", "GuildMembersCustomScrollBar", scrollFrame, "UIPanelScrollBarTemplate")
     customSlider:SetPoint("TOPRIGHT", scrollFrame, "TOPRIGHT", -2, -16)
     customSlider:SetPoint("BOTTOMRIGHT", scrollFrame, "BOTTOMRIGHT", -2, 16)
     customSlider:SetOrientation("VERTICAL")
     customSlider:SetThumbTexture("Interface\\Buttons\\UI-ScrollBar-Knob")
 
-    -- Define a helper function to hide the auto‑generated scroll bar
+    -- Hide the auto scroll bar
     local function HideAutoSlider()
         local autoSlider = _G[scrollFrame:GetName() .. "ScrollBar"]
         if autoSlider then
@@ -269,53 +333,43 @@ rightPillar:SetVertexColor(0, 0, 0, 1)
             autoSlider:HookScript("OnShow", function(self) self:Hide() end)
         end
     end
-
-    -- Use HookScript to ensure HideAutoSlider is called every time these frames show:
     scrollFrame:HookScript("OnShow", HideAutoSlider)
     contentFrame:HookScript("OnShow", HideAutoSlider)
-    frame:HookScript("OnShow", HideAutoSlider)  -- Optionally, hook the parent frame as well
-
-    -- Call HideAutoSlider immediately to hide it on first load
+    frame:HookScript("OnShow", HideAutoSlider)
     HideAutoSlider()
 
     --------------------------------------------------
-    -- Build Member Lists (Online and Offline)
+    -- Build Member Lists (Online / Offline)
     --------------------------------------------------
     local onlineMembers = {}
     local offlineMembers = {}
+
     if IsInGuild() then
         GuildRoster()  -- Force a roster update
         local numTotal = GetNumGuildMembers()
         if DEBUG then print("Guild roster count:", numTotal) end
         for i = 1, numTotal do
             local name, _, _, level, class, zone, note, officerNote, online = GetGuildRosterInfo(i)
-            local cleanName = CleanName(name)
-            
-            -- Use the database entry (which was parsed with the same method as in the DB module)
+            local clean = CleanName(name)
+
+            -- Pull from your database if available:
             local progress, professions, version = nil, nil, nil
-            if _G.guildPlayerDatabase then
-                local addonData = _G.guildPlayerDatabase[cleanName]
-                if addonData then
-                    progress = addonData.progress
-                    professions = addonData.professions  -- List of compressed profession strings (e.g. "L235")
-                    version = addonData.version
-                    if addonData.class and classCodeToName[addonData.class] then
-                        addonData.class = classCodeToName[addonData.class]
-                    end
-                end
-            end
 
             local memberData = {
-                name = cleanName,
-                race = "Unknown",  -- Classic doesn't reliably provide race info.
+                name = clean,
+                race = "Unknown",   -- Classic might not provide race reliably
                 class = class or "Unknown",
                 level = level or 1,
                 progress = progress,
                 professions = professions,
                 version = version,
+                hasAddon = nil,   -- This field will be filled when data is received.
             }
-            if _G.guildPlayerDatabase and _G.guildPlayerDatabase[cleanName] and _G.guildPlayerDatabase[cleanName].class then
-                memberData.class = _G.guildPlayerDatabase[cleanName].class
+            if _G.guildPlayerDatabase and _G.guildPlayerDatabase[clean] and _G.guildPlayerDatabase[clean].class then
+                memberData.class = _G.guildPlayerDatabase[clean].class
+                memberData.hasAddon = _G.guildPlayerDatabase[clean].hasAddon
+                memberData.progress = _G.guildPlayerDatabase[clean].progress
+                memberData.professions = _G.guildPlayerDatabase[clean].professions
             end
 
             if online then
@@ -325,6 +379,7 @@ rightPillar:SetVertexColor(0, 0, 0, 1)
             end
         end
     else
+        -- If not in a guild, add yourself.
         table.insert(onlineMembers, {
             name = CleanName(UnitName("player")),
             race = UnitRace("player") or "Unknown",
@@ -332,12 +387,11 @@ rightPillar:SetVertexColor(0, 0, 0, 1)
             level = UnitLevel("player") or 1,
             progress = MissionAccomplished.GetProgressPercentage() or 0,
             professions = nil,
+            hasAddon = "Y",  -- Since you are running the addon.
         })
     end
 
-    --------------------------------------------------
-    -- Self Data Update: Pull exclusively from the database
-    --------------------------------------------------
+    -- Insert or update self data from guild DB
     local selfName = CleanName(UnitName("player"))
     local selfData
     if _G.guildPlayerDatabase and _G.guildPlayerDatabase[selfName] then
@@ -354,9 +408,11 @@ rightPillar:SetVertexColor(0, 0, 0, 1)
             level = UnitLevel("player") or 1,
             progress = MissionAccomplished.GetProgressPercentage() or 0,
             professions = nil,
+            hasAddon = "Y",
         }
     end
 
+    -- Overwrite your own info if present in the online list
     local foundSelf = false
     for i, member in ipairs(onlineMembers) do
         if member.name:lower() == selfName:lower() then
@@ -369,13 +425,13 @@ rightPillar:SetVertexColor(0, 0, 0, 1)
         if DEBUG then print("Adding self data to onlineMembers.") end
         table.insert(onlineMembers, selfData)
     end
-
     for i = #offlineMembers, 1, -1 do
         if offlineMembers[i].name:lower() == selfName:lower() then
             table.remove(offlineMembers, i)
         end
     end
 
+    -- Sort online and offline lists
     table.sort(onlineMembers, function(a, b)
         if a.level == b.level then
             return a.name:lower() < b.name:lower()
@@ -383,7 +439,6 @@ rightPillar:SetVertexColor(0, 0, 0, 1)
             return a.level > b.level
         end
     end)
-
     table.sort(offlineMembers, function(a, b)
         if a.level == b.level then
             return a.name:lower() < b.name:lower()
@@ -392,21 +447,16 @@ rightPillar:SetVertexColor(0, 0, 0, 1)
         end
     end)
 
+    -- Combine the lists
     local allMembers = {}
-    for _, member in ipairs(onlineMembers) do
-        table.insert(allMembers, member)
+    for _, mem in ipairs(onlineMembers) do
+        table.insert(allMembers, mem)
     end
-    for _, member in ipairs(offlineMembers) do
-        table.insert(allMembers, member)
+    for _, mem in ipairs(offlineMembers) do
+        table.insert(allMembers, mem)
     end
 
     local lineHeight = 20
-
-    if DEBUG then
-        print("Total members (allMembers):", #allMembers)
-        print("Expected contentFrame height:", #allMembers * lineHeight)
-    end
-
     contentFrame:SetHeight(#allMembers * lineHeight)
 
     --------------------------------------------------
@@ -417,23 +467,28 @@ rightPillar:SetVertexColor(0, 0, 0, 1)
         local lf = CreateFrame("Frame", nil, contentFrame)
         lf:SetSize(420, lineHeight)
         lf:SetPoint("TOPLEFT", contentFrame, "TOPLEFT", 0, -((i - 1) * lineHeight))
+
         local bg = lf:CreateTexture(nil, "BACKGROUND")
         bg:SetAllPoints(lf)
         lf.bg = bg
+
         local fs = lf:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        fs:SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
         fs:SetAllPoints(lf)
         fs:SetJustifyH("LEFT")
         lf.fs = fs
 
         local memData = member
-        local trophy = ""
-        if memData.level >= 60 then
-            trophy = trophySymbol .. " "
-        end
+
+        -- Convert stored class (possibly a short code) to its full name.
+        local rawClass = memData.class or "Unknown"
+        local fullClassName = classCodeToName[rawClass] or rawClass
+
+        local trophy = (memData.level >= 60) and trophySymbol .. " " or ""
         local raceIcon = GetRaceIcon(memData.race)
-        local classIcon = GetClassIcon(memData.class)
-        local nameTheClass = string.format("%s the %s", memData.name, ProperCase(memData.class))
-        local infoText = ""
+        local classIcon = GetClassIcon(fullClassName)
+        local nameTheClass = string.format("%s the %s", memData.name, ProperCase(fullClassName))
+
         local isOnline = false
         for _, m in ipairs(onlineMembers) do
             if m.name:lower() == memData.name:lower() then
@@ -441,24 +496,48 @@ rightPillar:SetVertexColor(0, 0, 0, 1)
                 break
             end
         end
-        if isOnline then
-            if memData.progress then
-                infoText = string.format("Level: %d, Progress: %.1f%%", memData.level, memData.progress)
+
+        -- Append up to two profession icons if historic data exists.
+        local profIcons = ""
+        if memData.professions and #memData.professions > 0 then
+            local professionCodeToName = {
+                A  = "Alchemy", B  = "Blacksmithing", E  = "Enchanting", EN = "Engineering",
+                H  = "Herbalism", I  = "Inscription", J  = "Jewelcrafting", L  = "Leatherworking",
+                M  = "Mining", S  = "Skinning", T  = "Tailoring", F  = "Fishing",
+                C  = "Cooking", FA = "First Aid"
+            }
+            for j = 1, math.min(2, #memData.professions) do
+                local profData = memData.professions[j]
+                local profCode = string.match(profData, "^%a+")
+                local profName = professionCodeToName[profCode] or profCode
+                profIcons = profIcons .. " " .. GetProfessionIcon(profName)
+            end
+        end
+
+        -- Build the info text with proper coloring.
+        local infoText = ""
+        if memData.hasAddon == "Y" then
+            if isOnline then
+                infoText = string.format("Level: %d, Progress: %.1f%% | %sOnline|r", memData.level, memData.progress or 0, "|cff00ff00")
             else
-                infoText = string.format("Level: %d, (does not have addon)", memData.level)
+                infoText = string.format("Level: %d, Progress: %.1f%% | Offline", memData.level, memData.progress or 0)
             end
         else
-            infoText = string.format("Level: %d | Offline", memData.level)
+            if isOnline then
+                infoText = string.format("Level: %d, %sNO ADDON|r | %sOnline|r", memData.level, "|cffff0000", "|cff00ff00")
+            else
+                infoText = string.format("Level: %d, %sNO ADDON|r | Offline", memData.level, "|cffff0000")
+            end
         end
-        local lineText = string.format("%s%s %s  %s | %s", trophy, raceIcon, classIcon, nameTheClass, infoText)
-        lf.fs:SetText(lineText)
 
+        local lineText = string.format("%s%s %s  %s %s| %s", trophy, raceIcon, classIcon, nameTheClass, profIcons, infoText)
+        fs:SetText(lineText)
+
+        -- Background color: online members get their class color; offline use grey.
         local bgColor
-        if isOnline and memData.progress then
-            local classKey = ProperCase(memData.class)
+        if isOnline then
+            local classKey = ProperCase(fullClassName)
             bgColor = customClassColors[classKey] or { r = 1, g = 1, b = 1 }
-        elseif isOnline then
-            bgColor = { r = 1, g = 0, b = 0 }
         else
             bgColor = { r = 0.5, g = 0.5, b = 0.5 }
         end
@@ -466,18 +545,19 @@ rightPillar:SetVertexColor(0, 0, 0, 1)
         if memData.level >= 60 then
             r, g, b = r * 0.6, g * 0.6, b * 0.6
         end
-        lf.bg:SetColorTexture(r, g, b, 0.2)
+        bg:SetColorTexture(r, g, b, 0.2)
 
-        if isOnline and memData.progress then
-            local classKey = ProperCase(memData.class)
+        if isOnline then
+            local classKey = ProperCase(fullClassName)
             local clr = customClassColors[classKey] or { r = 1, g = 1, b = 1 }
-            lf.fs:SetTextColor(clr.r, clr.g, clr.b, 0.8)
-        elseif isOnline then
-            lf.fs:SetTextColor(1, 0, 0, 0.8)
+            fs:SetTextColor(clr.r, clr.g, clr.b, 0.8)
         else
-            lf.fs:SetTextColor(0.5, 0.5, 0.5, 0.8)
+            fs:SetTextColor(0.5, 0.5, 0.5, 0.8)
         end
 
+        --------------------------------------------------
+        -- OnEnter: Show tooltip with additional info
+        --------------------------------------------------
         lf:SetScript("OnEnter", function(self)
             local now = GetTime()
             local tooltipData
@@ -500,7 +580,12 @@ rightPillar:SetVertexColor(0, 0, 0, 1)
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
             GameTooltip:ClearLines()
             GameTooltip:AddLine("|cff00ff00" .. (tooltipData.name or "Unknown") .. "|r")
-            GameTooltip:AddLine("Level: " .. tooltipData.level, 1, 1, 1, false)
+            GameTooltip:AddLine("Level: " .. (tooltipData.level or 0), 1, 1, 1, false)
+            if tooltipData.lastSeen and tonumber(tooltipData.lastSeen) then
+                GameTooltip:AddLine("Last Seen: " .. date("%Y-%m-%d %H:%M:%S", tooltipData.lastSeen), 0.8, 0.8, 0.8, false)
+            else
+                GameTooltip:AddLine("Last Seen: Unknown", 0.8, 0.2, 0.2, false)
+            end
             if tooltipData.progress then
                 GameTooltip:AddLine(string.format("Progress: %.1f%%", tooltipData.progress), 1, 1, 1, false)
             end
@@ -533,6 +618,7 @@ rightPillar:SetVertexColor(0, 0, 0, 1)
             end
             GameTooltip:Show()
         end)
+
         lf:SetScript("OnLeave", function(self)
             GameTooltip:Hide()
         end)
@@ -542,19 +628,17 @@ rightPillar:SetVertexColor(0, 0, 0, 1)
     end
 
     --------------------------------------------------
-    -- Define a function to update the visible member list based on a given offset.
+    -- UpdateMemberList function (for scrolling)
     --------------------------------------------------
     local function UpdateMemberList(offset)
         if DEBUG then
             print("UpdateMemberList called with offset:", offset)
         end
+
         scrollFrame:SetVerticalScroll(offset)
         local visibleLines = math.floor(300 / lineHeight)
-        
-        -- Update the FauxScrollFrame with the visibleLines count
+
         FauxScrollFrame_Update(scrollFrame, #allMembers, visibleLines, lineHeight)
-        
-        -- Hide or show the custom slider depending on whether scrolling is needed.
         if #allMembers <= visibleLines then
             customSlider:Hide()
         else
@@ -564,6 +648,7 @@ rightPillar:SetVertexColor(0, 0, 0, 1)
         if customSlider then
             customSlider:SetValue(offset)
         end
+
         for i, lf in ipairs(allLineFrames) do
             local posY = (i - 1) * lineHeight - offset
             if posY + lineHeight >= 0 and posY <= 300 then
@@ -574,32 +659,28 @@ rightPillar:SetVertexColor(0, 0, 0, 1)
         end
     end
 
-    --------------------------------------------------
-    -- Mouse Wheel Handler: Use UpdateMemberList to adjust scrolling.
-    --------------------------------------------------
+    -- Mouse Wheel scrolling
     scrollFrame:EnableMouseWheel(true)
     scrollFrame:SetScript("OnMouseWheel", function(self, delta)
         local currentOffset = self:GetVerticalScroll()
         local newOffset = currentOffset - (delta * lineHeight)
-        
         local visibleLines = math.floor(300 / lineHeight)
         local maxOffset = math.max((#allMembers - visibleLines) * lineHeight, 0)
+
         if newOffset < 0 then
             newOffset = 0
         elseif newOffset > maxOffset then
             newOffset = maxOffset
         end
-        
+
         UpdateMemberList(newOffset)
-        
+
         if DEBUG then
             print("MouseWheel scrolled. New offset:", newOffset)
         end
     end)
 
-    --------------------------------------------------
     -- Custom Slider Setup
-    --------------------------------------------------
     local visibleLines = math.floor(300 / lineHeight)
     local maxOffset = math.max((#allMembers - visibleLines) * lineHeight, 0)
     if customSlider then
@@ -609,27 +690,21 @@ rightPillar:SetVertexColor(0, 0, 0, 1)
         customSlider:SetObeyStepOnDrag(true)
         customSlider:SetScript("OnValueChanged", function(self, value)
             if DEBUG then
-                print("Custom slider OnValueChanged triggered. New value:", value)
+                print("Custom slider OnValueChanged triggered. Value:", value)
             end
             UpdateMemberList(value)
         end)
-        
-        -- Hide the slider immediately if there is no need for scrolling.
         if maxOffset == 0 then
             customSlider:Hide()
         else
             customSlider:Show()
         end
     end
-
-    -- Force an initial update of the member list (scroll to top)
     UpdateMemberList(0)
 
-    -- Hook OnShow so that every time the Guild Functions frame is shown,
-    -- we wait a short moment before hiding the native scrollbar and updating the list.
     frame:HookScript("OnShow", function(self)
-        C_Timer.After(0.05, function()  -- Adjust the delay if needed
-            HideAutoSlider()  -- Ensure native scroll bar is hidden
+        C_Timer.After(0.05, function()
+            HideAutoSlider()
             UpdateMemberList(0)
         end)
     end)
@@ -653,6 +728,7 @@ rightPillar:SetVertexColor(0, 0, 0, 1)
     local statsHeader = statsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     statsHeader:SetPoint("TOP", statsFrame, "TOP", 0, -10)
     statsHeader:SetJustifyH("CENTER")
+
     local totalLevel = 0
     local totalCount = 0
     local level60Count = 0
@@ -660,25 +736,29 @@ rightPillar:SetVertexColor(0, 0, 0, 1)
     if IsInGuild() then
         local numTotal = GetNumGuildMembers()
         for i = 1, numTotal do
-            local name, _, _, level, class, zone, note, officerNote, online = GetGuildRosterInfo(i)
-            if level then
-                totalLevel = totalLevel + level
+            local name, _, _, lvl, cls = GetGuildRosterInfo(i)
+            if lvl then
+                totalLevel = totalLevel + lvl
                 totalCount = totalCount + 1
-                if level >= 60 then
+                if lvl >= 60 then
                     level60Count = level60Count + 1
                 end
-                local cls = ProperCase(class or "Unknown")
-                classCounts[cls] = (classCounts[cls] or 0) + 1
+                local properCls = ProperCase(cls or "Unknown")
+                classCounts[properCls] = (classCounts[properCls] or 0) + 1
             end
         end
     end
     local avgLevel = (totalCount > 0) and (totalLevel / totalCount) or 0
-    statsHeader:SetText(string.format("Avg Level: %.1f  |  Level 60s: %d  |  Total Members: %d", avgLevel, level60Count, totalCount))
+
+    statsHeader:SetText(
+        string.format("Avg Level: %.1f  |  Level 60s: %d  |  Total Members: %d",
+            avgLevel, level60Count, totalCount)
+    )
 
     local gridFrame = CreateFrame("Frame", nil, statsFrame)
     gridFrame:SetSize(440, 80)
     gridFrame:SetPoint("TOP", statsHeader, "BOTTOM", 0, -10)
-    
+
     local cells = {}
     local faction = UnitFactionGroup("player")
     for _, cls in ipairs(allClassesForStats) do
@@ -698,7 +778,11 @@ rightPillar:SetVertexColor(0, 0, 0, 1)
         local icon = GetClassIcon(cls)
         local color = customClassColors[cls] or { r = 1, g = 1, b = 1 }
         local hexColor = ColorToHex(color)
-        local cellStr = string.format("%s %s: %s", icon, available and (hexColor .. cls .. "|r") or ("|cff888888" .. cls .. "|r"), countText)
+        local cellStr = string.format("%s %s: %s",
+            icon,
+            available and (hexColor .. cls .. "|r") or ("|cff888888" .. cls .. "|r"),
+            countText
+        )
         table.insert(cells, { text = cellStr, available = available, cls = cls })
     end
 
@@ -726,6 +810,7 @@ rightPillar:SetVertexColor(0, 0, 0, 1)
         else
             cellFrame:SetBackdropColor(0.5, 0.5, 0.5, 0.1)
         end
+
         local cellFS = cellFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         cellFS:SetPoint("LEFT", cellFrame, "LEFT", 5, 0)
         cellFS:SetJustifyH("LEFT")

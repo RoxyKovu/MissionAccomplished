@@ -173,7 +173,6 @@ function GuildDatabaseBuild:SendCompressedPlayerInfo()
 
     local guildName = GetGuildInfo("player")
     if not guildName then
-        print("|cff00ff00[GuildDatabaseBuild]|r You are not in a guild. Function aborted.")
         return
     end
 

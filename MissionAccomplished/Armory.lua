@@ -38,11 +38,12 @@ local function MahlersArmoryContent()
     backgroundTexture:SetDrawLayer("BACKGROUND", -1)
 
     ------------------------------------------------------------
-    -- Title
+    -- Title 
     ------------------------------------------------------------
-    local title = armoryFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
-    title:SetPoint("TOP", armoryFrame, "TOP", 0, -20)
-    title:SetText("|cffffd700Mahler's Armory|r")
+local title = armoryFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    title:SetPoint("TOP", armoryFrame, "TOP", 0, -10)
+    title:SetFont("Fonts\\MORPHEUS.TTF", 32, "OUTLINE")
+    title:SetText("|cffFF0000Mahler's Armory|r")
 
     ------------------------------------------------------------
     -- Character Model

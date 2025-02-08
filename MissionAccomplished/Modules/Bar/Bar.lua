@@ -3,11 +3,13 @@
 --=============================================================================
 -- Creates and updates the XP bar for MissionAccomplished, positioned near
 -- the player frame. Includes an attached custom icon (gavicon) overlapping on
--- the left. SHIFT+Drag to move. Provides a toggle function to show/hide.
--- Additionally, when the player is level 60:
---   - The bar fills to 100%
---   - The text shows a completion message and any overflow EXP.
--- The tooltip now also shows the estimated time remaining until level 60.
+-- the left (which remains visible at all times). SHIFT+Drag to move. Provides
+-- a toggle function to show/hide.
+-- 
+-- When the player reaches level 60:
+--   - The bar fills completely and turns gold.
+--   - The text displays "Mission Accomplished" followed by the level 60 achievement icon.
+--   - The tooltip shows the standard header without the extra achievement icon.
 --=============================================================================
 
 MissionAccomplished = MissionAccomplished or {}
@@ -52,7 +54,7 @@ function MissionAccomplished_Bar_Setup()
     else
         -- Position above the PlayerFrame (default)
         barFrame:ClearAllPoints()
-        barFrame:SetPoint("BOTTOMLEFT", PlayerFrame, "TOPLEFT", -5, 10)
+        barFrame:SetPoint("BOTTOMLEFT", PlayerFrame, "TOPLEFT", 100, -22)
     end
 
     -- Add a background + border
@@ -66,25 +68,25 @@ function MissionAccomplished_Bar_Setup()
     })
     barFrame:SetBackdropColor(0, 0, 0, 0.8)
 
-    -- Create a red StatusBar for XP progress
+    -- Create a StatusBar for XP progress
     local xpBar = CreateFrame("StatusBar", "MissionAccomplishedXPBar", barFrame, "BackdropTemplate")
     xpBar:SetSize(180, 12) -- Slightly smaller for a border effect
     xpBar:SetPoint("CENTER", barFrame, "CENTER", 0, 0)
     xpBar:SetMinMaxValues(0, 1)
     xpBar:SetValue(0)
     xpBar:SetStatusBarTexture("Interface\\TARGETINGFRAME\\UI-StatusBar")
-    xpBar:SetStatusBarColor(1, 0, 0) -- Red
+    xpBar:SetStatusBarColor(1, 0, 0) -- Red by default
 
     -- XP text
     local xpText = xpBar:CreateFontString("MissionAccomplishedXPText", "OVERLAY", "GameFontHighlight")
     xpText:SetPoint("CENTER", xpBar, "CENTER", 0, 0)
-    xpText:SetFont("Fonts\\FRIZQT__.TTF", 8, "OUTLINE") 
+    xpText:SetFont("Fonts\\FRIZQT__.TTF", 8, "OUTLINE")
     xpText:SetText("0.0% | XP Remaining: 0")
 
-    -- Attach icon on the left
+    -- Attach the gavicon to the left of the bar (always visible)
     local icon = MissionAccomplished_Bar_AddIcon(barFrame)
-    icon:SetPoint("RIGHT", barFrame, "LEFT", 5, 0) 
-    icon:SetFrameLevel(barFrame:GetFrameLevel() + 1) 
+    icon:SetPoint("RIGHT", barFrame, "LEFT", 5, 0)
+    icon:SetFrameLevel(barFrame:GetFrameLevel() + 1)
 
     -- Tooltip for bar
     barFrame:SetScript("OnEnter", function(self)
@@ -108,7 +110,7 @@ end
 function MissionAccomplished_Bar_AddIcon(parent)
     local iconFrame = _G["MissionAccomplishedIconFrame"]
         or CreateFrame("Frame", "MissionAccomplishedIconFrame", parent)
-    iconFrame:SetSize(24, 24) 
+    iconFrame:SetSize(24, 24)
     local iconTexture = iconFrame:CreateTexture(nil, "ARTWORK")
     iconTexture:SetAllPoints(iconFrame)
     iconTexture:SetTexture("Interface\\AddOns\\MissionAccomplished\\Contents\\gavicon.blp")
@@ -131,32 +133,45 @@ function MissionAccomplished_Bar_AddIcon(parent)
 end
 
 ---------------------------------------------------------------
--- 3) SHOW TOOLTIP (Now Includes Time Until Level 60)
+-- 3) SHOW TOOLTIP (Standard Header without extra achievement icon)
 ---------------------------------------------------------------
 function MissionAccomplished_Bar_ShowTooltip(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    local playerName   = UnitName("player") or "Player"
-    local level        = UnitLevel("player") or 0
-    local currentXP    = UnitXP("player") or 0
-    local xpThisLevel  = UnitXPMax("player") or 1
-    local xpSoFar      = MissionAccomplished.GetTotalXPSoFar()
-    local xpMax        = MissionAccomplished.GetXPMaxTo60()
-    local xpLeft       = xpMax - xpSoFar
-    local percentComplete = (xpSoFar / xpMax) * 100
-    local timePlayed   = MissionAccomplished.GetTotalTimePlayed()
-
-    GameTooltip:AddLine("|cff00ff00MissionAccomplished|r")
+    
+    -- Updated header: attach the gavicon to the left of the MissionAccomplished title
+    local gavicon = "|TInterface\\AddOns\\MissionAccomplished\\Contents\\gavicon.blp:16:16:0:0|t "
+    local headerLine = gavicon .. "|cff00ff00MissionAccomplished|r"
+    GameTooltip:AddLine(headerLine)
+    
+    local playerName = UnitName("player") or "Player"
+    local level = UnitLevel("player") or 0
     GameTooltip:AddLine(playerName .. "'s Journey", 1, 1, 1, true)
     GameTooltip:AddLine("Current Level: " .. level, 1, 1, 1)
-    GameTooltip:AddLine(string.format("XP This Level: %d / %d", currentXP, xpThisLevel), 1, 1, 1)
-    GameTooltip:AddLine(" ")
-    GameTooltip:AddLine("To Level 60:")
-    GameTooltip:AddLine(string.format("Overall Progress: %.1f%%", percentComplete), 1, 1, 1)
-    GameTooltip:AddLine(string.format("EXP Needed: %d", xpLeft), 1, 1, 1)
+    
     if level < 60 then
+        local currentXP = UnitXP("player") or 0
+        local xpThisLevel = UnitXPMax("player") or 1
+        GameTooltip:AddLine(string.format("XP This Level: %d / %d", currentXP, xpThisLevel), 1, 1, 1)
+        
+        local xpSoFar = MissionAccomplished.GetTotalXPSoFar()
+        local xpMax = MissionAccomplished.GetXPMaxTo60()
+        local xpLeft = xpMax - xpSoFar
+        local percentComplete = (xpSoFar / xpMax) * 100
+
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine("To Level 60:")
+        GameTooltip:AddLine(string.format("Overall Progress: %.1f%%", percentComplete), 1, 1, 1)
+        GameTooltip:AddLine(string.format("EXP Needed: %d", xpLeft), 1, 1, 1)
         local timeTo60 = MissionAccomplished.GetTimeToLevel60()
         GameTooltip:AddLine(string.format("Time until level 60: %s", MissionAccomplished.FormatSeconds(timeTo60)), 1, 1, 1)
+    else
+        -- At level 60, show the standard header above and then the XP line
+        -- will be handled by the bar's text (see below).
+        local achievementIcon = "|TInterface\\Icons\\achievement_level_60:16:16:0:0|t"
+        GameTooltip:AddLine("XP This Level: Mission Accomplished " .. achievementIcon, 1, 1, 1)
     end
+
+    local timePlayed = MissionAccomplished.GetTotalTimePlayed()
     GameTooltip:AddLine(string.format("Time Played: %s", timePlayed), 1, 1, 1)
     GameTooltip:AddLine(" ")
     GameTooltip:AddLine("Shift + Drag the bar to reposition it.", 1, 1, 1)
@@ -168,29 +183,29 @@ end
 -- 4) UPDATE THE XP BAR
 ---------------------------------------------------------------
 function MissionAccomplished_Bar_Update()
-    local xpBar  = MissionAccomplished.xpBar
+    local xpBar = MissionAccomplished.xpBar
     local xpText = MissionAccomplished.xpText
     if not xpBar or not xpText then
         return
     end
 
     local xpSoFar = MissionAccomplished.GetTotalXPSoFar()
-    local xpMax   = MissionAccomplished.GetXPMaxTo60()
-    local level   = UnitLevel("player") or 1
+    local xpMax = MissionAccomplished.GetXPMaxTo60()
+    local level = UnitLevel("player") or 1
 
     if level >= 60 then
-        -- For level 60 or higher, cap the bar at 100% and show completion message.
+        -- For level 60 or higher:
+        -- Fill the bar completely, change its color to gold, and display
+        -- "Mission Accomplished" plus the level 60 achievement icon.
         xpBar:SetValue(1)
-        local overflow = xpSoFar - xpMax
-        if overflow > 0 then
-            xpText:SetText(string.format("100%% | Level 60 complete! Overflow: %d EXP", overflow))
-        else
-            xpText:SetText("Level 60 complete!")
-        end
+        xpBar:SetStatusBarColor(1, 0.84, 0)  -- Gold color (approximate)
+        local achievementIcon = "|TInterface\\Icons\\achievement_level_60:16:16:0:0|t"
+        xpText:SetText("Mission Accomplished " .. achievementIcon)
     else
         local percent = (xpSoFar / xpMax) * 100
-        local xpLeft = xpMax - xpSoFar
         xpBar:SetValue(percent / 100)
+        xpBar:SetStatusBarColor(1, 0, 0)  -- Red color for below level 60
+        local xpLeft = xpMax - xpSoFar
         xpText:SetText(string.format("%.1f%% | XP Remaining: %d", percent, xpLeft))
     end
 end

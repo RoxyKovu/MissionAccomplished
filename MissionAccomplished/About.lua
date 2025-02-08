@@ -1,97 +1,105 @@
---------------------------------------------------
+--=============================================================================
 -- About.lua
--- This file defines the content for the "About" tab with enhanced visuals and adjustments for size and greater transparency.
---------------------------------------------------
+-- This file defines the content for the "About" tab with enhanced visuals
+-- and adjustments for size and greater transparency.
+--=============================================================================
 
 local function AboutContent()
-    -- Create the parent frame for the "About" content
+    -- Create the parent frame for the "About" content.
     local aboutFrame = CreateFrame("Frame", "MissionAccomplishedAboutFrame", _G.SettingsFrameContent.contentFrame)
-    aboutFrame:SetAllPoints(_G.SettingsFrameContent.contentFrame) -- Ensure it fits within the provided content frame
+    aboutFrame:SetAllPoints(_G.SettingsFrameContent.contentFrame) -- Fit within the provided content frame.
     aboutFrame:SetFrameStrata("DIALOG")
 
-    -- Background texture setup
+    -- Background texture setup.
     local backgroundTexture = aboutFrame:CreateTexture(nil, "BACKGROUND")
     backgroundTexture:SetTexture("Interface\\AddOns\\MissionAccomplished\\Contents\\RoxyKovu.blp")
-    backgroundTexture:SetPoint("CENTER", aboutFrame, "CENTER") -- Center the texture within the frame
-    backgroundTexture:SetSize(aboutFrame:GetWidth() * 0.8, aboutFrame:GetHeight() * 0.8) -- Scale it to 80% of the frame size
-    backgroundTexture:SetAlpha(0.2) -- 20% transparency for a subtle effect
-
-    -- Adjust the texture's aspect ratio
+    backgroundTexture:SetPoint("CENTER", aboutFrame, "CENTER") -- Center the texture.
+    backgroundTexture:SetSize(aboutFrame:GetWidth() * 0.8, aboutFrame:GetHeight() * 0.8) -- Scale to 80% of the frame size.
+    backgroundTexture:SetAlpha(0.2) -- 20% transparency.
     backgroundTexture:SetTexCoord(0, 1, 0, 1)
 
-    -- Fallback if texture doesn't load
+    -- Fallback if texture doesn't load.
     if not backgroundTexture:IsShown() then
         print("|cffff0000Warning: RoxyKovu.blp texture not found. Using fallback.|r")
-        backgroundTexture:SetTexture("Interface\\Buttons\\WHITE8x8") -- Fallback texture
-        backgroundTexture:SetAlpha(0.1) -- Even lighter fallback transparency
+        backgroundTexture:SetTexture("Interface\\Buttons\\WHITE8x8") -- Fallback texture.
+        backgroundTexture:SetAlpha(0.1) -- Even lighter transparency.
     end
 
-    -- Title and content text
-    local title = aboutFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
-    title:SetPoint("TOP", aboutFrame, "TOP", 0, -20)
-    title:SetText("|cffffd700MissionAccomplished|r")
+    -----------------------------------------------------------------------------
+    -- Title (Morpheus font, 32pt, outlined, white) with gavicon.blp to its left.
+    -----------------------------------------------------------------------------
+    local title = aboutFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    title:SetPoint("TOP", aboutFrame, "TOP", 10, -10)  -- Slight right offset to make room for the icon.
+    title:SetFont("Fonts\\MORPHEUS.TTF", 32, "OUTLINE")
+    title:SetText("|cffffffffMissionAccomplished|r")
 
-    local subtitle = aboutFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    subtitle:SetPoint("TOP", title, "BOTTOM", 0, -10)
-    subtitle:SetText("|cff00ff00A Labor of Love by Gavrial|r")
+    -- Create the gavicon texture and position it to the left of the title.
+    local icon = aboutFrame:CreateTexture(nil, "OVERLAY")
+    icon:SetTexture("Interface\\AddOns\\MissionAccomplished\\Contents\\gavicon.blp")
+    icon:SetSize(32, 32)  -- Adjust the size as needed.
+    icon:SetPoint("RIGHT", title, "LEFT", -5, 0)
 
-    local body = aboutFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    body:SetPoint("TOP", subtitle, "BOTTOM", 0, -20)
-    body:SetWidth(aboutFrame:GetWidth() * 0.9) -- Limit text width for readability
-    body:SetJustifyH("LEFT")
-    body:SetText([[ 
-Welcome, adventurer! Thank you for checking out **MissionAccomplished**, a humble project created by someone who just loves games and wants others to enjoy them even more.
+-----------------------------------------------------------------------------
+-- Subtitle and Body Text
+-----------------------------------------------------------------------------
+local subtitle = aboutFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+subtitle:SetPoint("TOP", title, "BOTTOM", 0, -10)
+subtitle:SetText("|cff00ff00Inspired by the many failed trials of Gavrial|r")
 
-At |cff00ff00RoxyKovu|r, our philosophy is simple: games are more than just entertainment—they’re adventures, connections, and stories waiting to unfold. MissionAccomplished was born out of this love for gaming, with the goal of making every journey in Azeroth even more memorable.
+local body = aboutFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+body:SetPoint("TOP", subtitle, "BOTTOM", 0, -20)
+body:SetWidth(aboutFrame:GetWidth() * 0.9) -- Limit text width for readability.
+body:SetJustifyH("LEFT")
+body:SetText([[ 
+Welcome, adventurer. Thank you for exploring **MissionAccomplished**. This project is the result of extensive experimentation and the hard lessons learned from the many failed trials of Gavrial, all aimed at enhancing the overall player experience.
 
-We’re a small team fueled by creativity and passion, and every feature we develop is designed to enhance your experience. Whether you’re tracking your progress, planning your next adventure, or just enjoying the ride, we hope this tool brings a bit of joy and utility to your gaming sessions.
+At |cff00ff00RoxyKovu|r, we believe that games are far more than a mere pastime—they serve as gateways to adventure, foster meaningful connections, and provide the canvas for unforgettable stories. MissionAccomplished was conceived through persistent effort and inspired by the challenges overcome along the way, with the goal of enriching every journey in Azeroth.
 
-Your feedback and support mean the world to us. If you have suggestions or ideas, please don’t hesitate to reach out. We’re always striving to make things better—for the love of the game.
+Our dedicated team is driven by creativity, resilience, and a deep respect for the gaming community. Every feature is meticulously designed to enhance your experience—whether you are tracking your progress, preparing for your next quest, or simply immersing yourself in the world around you.
 
-Thank you for being part of this journey. See you out there, champion!
-    ]])
+We welcome your feedback and suggestions as we continuously strive to refine and improve this tool for all players.
 
-     ---------------------------------------------------------------------
+Thank you for being an integral part of this journey. We look forward to welcoming you in Azeroth.
+]])
+
+
+    ---------------------------------------------------------------------
     -- Add Global Addon Users Count at the Bottom of the About Tab
     ---------------------------------------------------------------------
     local userCountFrame = CreateFrame("Frame", nil, aboutFrame)
     userCountFrame:SetSize(220, 20)
     userCountFrame:SetPoint("BOTTOM", aboutFrame, "BOTTOM", 0, 10)
 
-    -- Create a small icon (using a group-looking icon as an example)
+    -- Create a small icon (using a group-looking icon as an example).
     local userIcon = userCountFrame:CreateTexture(nil, "OVERLAY")
     userIcon:SetSize(16, 16)
     userIcon:SetPoint("LEFT", userCountFrame, "LEFT", 0, 0)
     userIcon:SetTexture("Interface\\Icons\\INV_Misc_GroupLooking")
 
-    -- Create a FontString to show the count
+    -- Create a FontString to show the count.
     local userCountText = userCountFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     userCountText:SetPoint("LEFT", userIcon, "RIGHT", 5, 0)
     userCountText:SetText("Addon Users: ?")
 
-    -- Function to update the player count
+    -- Function to update the player count.
     local function UpdateOnlineUserCount()
-
         local currentTime = time()
         local activePlayerCount = 0
 
-        -- Ensure playerDatabase exists
+        -- Ensure playerDatabase exists.
         if not playerDatabase or type(playerDatabase) ~= "table" then
             userCountText:SetText("|cffff0000Still parsing information, please come back in 5 minutes|r")
             return
         end
 
-
         for name, data in pairs(playerDatabase) do
-            local lastSeen = data.lastSeen or time()
-
-            -- Check if the player was seen within the last 10 minutes
+            local lastSeen = data.lastSeen or 0
+            -- Count if the player was seen within the last 10 minutes (600 seconds).
             if (currentTime - lastSeen) <= 600 then
                 activePlayerCount = activePlayerCount + 1
             end
         end
 
-        -- Display the correct message
         if activePlayerCount > 0 then
             userCountText:SetText("|cff00ff00Addon Users Online in this Faction: " .. activePlayerCount .. "|r")
         else
@@ -99,20 +107,15 @@ Thank you for being part of this journey. See you out there, champion!
         end
     end
 
-    -- Ensure UpdateOnlineUserCount runs immediately when About is opened
+    -- Run the update function immediately when the About tab is opened, and set up a ticker.
     aboutFrame:SetScript("OnShow", function()
-
-
-        -- Stop any existing timer before creating a new one
+        -- Cancel any existing timer.
         if aboutFrame.updateTimer then
             aboutFrame.updateTimer:Cancel()
             aboutFrame.updateTimer = nil
         end
 
-        -- Run the update function immediately
         UpdateOnlineUserCount()
-
-        -- Start a new timer that updates every 10 seconds
         aboutFrame.updateTimer = C_Timer.NewTicker(10, function()
             if aboutFrame:IsShown() then
                 UpdateOnlineUserCount()
@@ -120,7 +123,7 @@ Thank you for being part of this journey. See you out there, champion!
         end)
     end)
 
-    -- Stop the timer when the About tab is hidden (switching tabs)
+    -- Stop the timer when the About tab is hidden.
     aboutFrame:SetScript("OnHide", function()
         if aboutFrame.updateTimer then
             aboutFrame.updateTimer:Cancel()

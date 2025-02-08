@@ -1,15 +1,17 @@
 ## Interface: 11506
-## Title: MissionAccomplished
-## Notes: A comprehensive Hardcore add-on with various enhancements to improve gameplay.
+## Title: |TInterface/AddOns/MissionAccomplished/Contents/gavicon.blp:16:16|t MissionAccomplished |cff0070ddv1.5|r
+## Notes: A comprehensive Hardcore add-on with various enhancements to improve gameplay.|n|cffbbbbbbBy RoxyKovu|r|n|n|TInterface/AddOns/MissionAccomplished/Contents/GithubIcon.blp:12:12|t |cff82c5ffgithub.com/RoxyKovu/MissionAccomplished|r|n|TInterface/AddOns/MissionAccomplished/Contents/CurseForgeIcon.png:12:12|t |cff82c5ffcurseforge.com/wow/addons/missionaccomplished|r
 ## Author: RoxyKovu
-## Version: 1.3
-
+## X-License: All Rights Reserved
+## X-Category: Hardcore / Gameplay
 ## SavedVariables: MissionAccomplishedDB
 
 #------------------------------------
 # Library
 #------------------------------------
 Library/ProfessionLib.lua
+Library/EventsDictionary.lua
+#Library/LibStub.lua
 
 #------------------------------------
 # AddOn Core / Modules
@@ -18,6 +20,7 @@ MissionAccomplished.xml
 Core.lua
 Modules/GavrialsCall/GavrialsCall.xml
 Modules/Bar/Bar.lua
+#Modules/Bar/ExperienceBar.lua
 GavrialCorner.lua
 NagletsToolkit.lua
 Armory.lua
@@ -25,6 +28,8 @@ Stats.lua
 Guild.lua
 Modules/DatabaseBuild/DatabaseBuild.lua
 Modules/DatabaseBuild/GuildDatabaseBuild.lua
+Modules/FirstTime/FirstTimeUserPrompt.lua
+Modules/EventLog/EventsLog.lua
 
 #------------------------------------
 # UI / Settings
@@ -33,8 +38,10 @@ SettingsContent.lua
 About.lua
 Settings.lua
 Modules/GavrialsCall/GavrialsCall.lua
+Modules/GavrialsCall/GuildNotifications.lua
 
 #------------------------------------
 # AddOn Options Panel
 #------------------------------------
-MissionAccomplished_OptionsPanel.lua 
+MissionAccomplished_OptionsPanel.lua
+Modules/TradeUI/TradeUI.lua

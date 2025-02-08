@@ -15,10 +15,9 @@ local activeTabButton = nil
 _G.SettingsFrameContent = {}  -- Global table to share references (used by the toolkit tab)
 
 -- Define content functions
--- Ensure that all content functions are defined and loaded before this point
--- Assuming GavrialCornerContent, NagletsToolkitContent, MahlersArmoryContent, SettingsContent, and AboutContent are defined in their respective files
+-- (Assumes that GavrialCornerContent, NagletsToolkitContent, MahlersArmoryContent, SettingsContent, and AboutContent are defined in their respective files)
 
--- Define tabs. The "Mahler's Armory" tab's content function handles showing or creating the Armory frame.
+-- Define tabs. (Note: We still list them in the order we want for processing,
 local menuTabs = {
     { name = "Gavrial's Corner",   contentFunc = GavrialCornerContent },
     { name = "Naglet's Toolkit",   contentFunc = NagletsToolkitContent },
@@ -35,10 +34,12 @@ local menuTabs = {
             return armoryFrame
         end
     },
-    { name = "Guild Functions",    contentFunc = _G.MissionAccomplished_GuildContent },  -- Fixed reference
+    { name = "Guild Functions",    contentFunc = _G.MissionAccomplished_GuildContent },  
+    { name = "Events Log",         contentFunc = EventsLogContent },  -- ✅ Correctly added reference
     { name = "Settings",           contentFunc = SettingsContent },
     { name = "About",              contentFunc = AboutContent },
 }
+
 
 -- Function to hide all tab content frames
 local function HideAllTabFrames()
@@ -82,6 +83,9 @@ local function MissionAccomplished_UpdateContent(content, isToolkit)
         settingsFrame.contentText:Show()
     end
 end
+
+-- Expose the update function globally (so other files can call it)
+_G.MissionAccomplished_UpdateContent = MissionAccomplished_UpdateContent
 
 -- Function to set up the settings window UI
 local function MissionAccomplished_Settings_Setup()
@@ -143,71 +147,94 @@ local function MissionAccomplished_Settings_Setup()
     })
     menuBackground:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
 
-    -- Create a button for each tab.
-    local visibleTabIndex = 0
+    -- Separate tabs into two groups: top group and bottom group.
+    local topTabs = {}
+    local bottomTabs = {}
     for i, tab in ipairs(menuTabs) do
-        -- If this is the "Guild Functions" tab and the player is not in a guild, skip it.
-        if tab.name == "Guild Functions" and not IsInGuild() then
-            -- Optionally, you can print a debug message:
-            -- print("Player not in a guild; skipping Guild Functions tab.")
+        if tab.name == "Settings" or tab.name == "About" then
+            table.insert(bottomTabs, tab)
         else
-            visibleTabIndex = visibleTabIndex + 1
-            local button = CreateFrame("Button", nil, menuBackground, "UIPanelButtonTemplate")
-            button:SetSize(160, 40)
-            button:SetPoint("TOPLEFT", 10, -10 - (visibleTabIndex - 1) * 50)
-            button:SetText(tab.name)
-            button.contentFunc = tab.contentFunc
+            table.insert(topTabs, tab)
+        end
+    end
 
-            button:SetScript("OnClick", function(self)
-                if activeTabButton and activeTabButton ~= self then
-                    activeTabButton:SetNormalFontObject("GameFontNormal")
+    local buttonSpacing = 50
+
+    -- Create top group buttons (aligned from the top of menuBackground)
+    for i, tab in ipairs(topTabs) do
+        local button = CreateFrame("Button", nil, menuBackground, "UIPanelButtonTemplate")
+        button:SetSize(160, 40)
+        button:SetPoint("TOPLEFT", 10, -10 - (i-1) * buttonSpacing)
+        button:SetText(tab.name)
+        button.contentFunc = tab.contentFunc
+
+        button:SetScript("OnClick", function(self)
+            if activeTabButton and activeTabButton ~= self then
+                activeTabButton:SetNormalFontObject("GameFontNormal")
+            end
+            activeTabButton = self
+            self:SetNormalFontObject("GameFontHighlight")
+
+            -- Trigger any additional update if needed for "Guild Functions" tab.
+            if self:GetText() == "Guild Functions" then
+                if GuildDatabaseBuild and GuildDatabaseBuild.SendCompressedPlayerInfo then
+                    GuildDatabaseBuild:SendCompressedPlayerInfo()
                 end
-                activeTabButton = self
-                self:SetNormalFontObject("GameFontHighlight")
+            end
 
-                -- Trigger the update event if the "Guild Functions" tab is clicked.
-                if self:GetText() == "Guild Functions" then
-                    if GuildDatabaseBuild and GuildDatabaseBuild.SendCompressedPlayerInfo then
-                        GuildDatabaseBuild:SendCompressedPlayerInfo()
+            HideAllTabFrames()  -- Hide previous content
+
+            -- Display the new content:
+            if self.contentFunc == NagletsToolkitContent then
+                local content = self.contentFunc()
+                MissionAccomplished_UpdateContent(content, true)
+            elseif self.contentFunc == topTabs[3].contentFunc then  -- Mahler's Armory
+                local content = self.contentFunc()
+                if type(content) == "table" and content.armory then
+                    local container = CreateFrame("Frame", nil, settingsFrame.contentFrame, "BackdropTemplate")
+                    container:SetAllPoints(settingsFrame.contentFrame)
+                    settingsFrame.contentText:Hide()
+                    content.armory:SetParent(container)
+                    content.armory:ClearAllPoints()
+                    content.armory:SetPoint("TOPLEFT", container, "TOPLEFT", 0, 0)
+                    content.armory:Show()
+                    if content.stats then
+                        content.stats:SetParent(container)
+                        content.stats:ClearAllPoints()
+                        content.stats:SetPoint("TOPLEFT", content.armory, "BOTTOMLEFT", 0, -10)
+                        content.stats:Show()
                     end
-                end
-
-                HideAllTabFrames()  -- Hide previous content
-
-                -- Handle specific tabs
-                if self.contentFunc == NagletsToolkitContent then
-                    local content = self.contentFunc()
-                    MissionAccomplished_UpdateContent(content, true)
-                elseif self.contentFunc == menuTabs[3].contentFunc then  -- Mahler's Armory
-                    local content = self.contentFunc()
-                    if type(content) == "table" and content.armory then
-                        -- Create a container to hold both the armory and stats.
-                        local container = CreateFrame("Frame", nil, settingsFrame.contentFrame, "BackdropTemplate")
-                        container:SetAllPoints(settingsFrame.contentFrame)
-                        settingsFrame.contentText:Hide()
-
-                        content.armory:SetParent(container)
-                        content.armory:ClearAllPoints()
-                        content.armory:SetPoint("TOPLEFT", container, "TOPLEFT", 0, 0)
-                        content.armory:Show()
-
-                        if content.stats then
-                            content.stats:SetParent(container)
-                            content.stats:ClearAllPoints()
-                            content.stats:SetPoint("TOPLEFT", content.armory, "BOTTOMLEFT", 0, -10)
-                            content.stats:Show()
-                        end
-
-                        MissionAccomplished_UpdateContent(container)
-                    else
-                        MissionAccomplished_UpdateContent(content)
-                    end
+                    MissionAccomplished_UpdateContent(container)
                 else
-                    local content = self.contentFunc()
                     MissionAccomplished_UpdateContent(content)
                 end
-            end)
-        end
+            else
+                local content = self.contentFunc()
+                MissionAccomplished_UpdateContent(content)
+            end
+        end)
+    end
+
+    -- Create bottom group buttons (anchored to the bottom of menuBackground)
+    for i, tab in ipairs(bottomTabs) do
+        local button = CreateFrame("Button", nil, menuBackground, "UIPanelButtonTemplate")
+        button:SetSize(160, 40)
+        button:SetPoint("BOTTOMLEFT", 10, 20 + (i-1) * buttonSpacing)
+        button:SetText(tab.name)
+        button.contentFunc = tab.contentFunc
+
+        button:SetScript("OnClick", function(self)
+            if activeTabButton and activeTabButton ~= self then
+                activeTabButton:SetNormalFontObject("GameFontNormal")
+            end
+            activeTabButton = self
+            self:SetNormalFontObject("GameFontHighlight")
+
+            HideAllTabFrames()  -- Hide previous content
+
+            local content = self.contentFunc()
+            MissionAccomplished_UpdateContent(content)
+        end)
     end
 
     -- Create the content frame
@@ -240,7 +267,7 @@ local function MissionAccomplished_Settings_Setup()
     _G.SettingsFrameContent.contentFrame = contentFrame
     _G.SettingsFrameContent.toolkitFrame = nil
 
-    -- Auto-click the first tab to show default content.
+    -- Auto-click the first top tab to show default content.
     local children = { menuBackground:GetChildren() }
     if #children > 0 and children[1] then
         children[1]:GetScript("OnClick")(children[1])

@@ -86,14 +86,16 @@ local function NagletsToolkitContent()
     ----------------------------------------------------------------
     -- 1) In-Game Tools
     ----------------------------------------------------------------
+
+    -- Timer function that sends event box messages.
     local function StartTenSecondTimer()
         for i = 1, 10 do
             C_Timer.After(i, function()
                 local remain = 10 - i
                 if remain > 0 then
-                    print("[Naglet's Toolkit] Timer: " .. remain .. " seconds remaining.")
+                    MissionAccomplished.GavrialsCall.DisplayMessage("Timer", remain .. " seconds remaining.", "Interface\\Icons\\spell_holy_borrowedtime", {1, 1, 1})
                 else
-                    print("[Naglet's Toolkit] Timer completed.")
+                    MissionAccomplished.GavrialsCall.DisplayMessage("Timer", "Timer completed.", "Interface\\Icons\\spell_holy_borrowedtime", {1, 1, 1})
                 end
             end)
         end
@@ -103,28 +105,25 @@ local function NagletsToolkitContent()
         { "Ready Check", function()
             DoReadyCheck()
             local msg = "I've initiated a ready check for you!"
-            print("[Naglet's Toolkit] Sent Ready Check.")
-            MissionAccomplished.GavrialsCall.DisplayMessage("Ready Check", msg, "Interface\\Icons\\INV_Misc_QuestionMark", {1, 1, 1})
+            MissionAccomplished.GavrialsCall.DisplayMessage("Ready Check", msg, "Interface\\Icons\\spell_holy_resurrection", {1, 1, 1})
         end },
         { "Roll", function()
-            local roll = math.random(1, 100)
-            local msg = "You rolled a " .. roll .. ". Nice roll!"
-            print("[Naglet's Toolkit] Roll result: " .. roll)
-            MissionAccomplished.GavrialsCall.DisplayMessage("Roll", msg, "Interface\\Icons\\INV_Dice_02", {1, 1, 1})
+            -- Use the built-in in-game roll command.
+            RandomRoll(1, 100)
+            local msg = "Rolling a dice... Check the chat for the result!"
+            MissionAccomplished.GavrialsCall.DisplayMessage("Roll", msg, "Interface\\Icons\\inv_misc_dice_02", {1, 1, 1})
         end },
         { "10s Timer", function()
             StartTenSecondTimer()
             local msg = "I've started a 10-second countdown for you!"
-            print("[Naglet's Toolkit] Started 10-second timer.")
-            MissionAccomplished.GavrialsCall.DisplayMessage("Timer", msg, "Interface\\Icons\\INV_Misc_Map_01", {1, 1, 1})
+            MissionAccomplished.GavrialsCall.DisplayMessage("Timer", msg, "Interface\\Icons\\inv_misc_ticket_tarot_blessings", {1, 1, 1})
         end },
         { "Clear Marks", function()
             for i = 1, 40 do
                 SetRaidTarget("raid" .. i, 0)
             end
             local msg = "I've cleared all raid markers for you."
-            print("[Naglet's Toolkit] Cleared all raid markers.")
-            MissionAccomplished.GavrialsCall.DisplayMessage("Raid Markers", msg, "Interface\\Icons\\INV_Misc_QuestionMark", {1, 1, 1})
+            MissionAccomplished.GavrialsCall.DisplayMessage("Raid Markers", msg, "Interface\\Icons\\achievement_dungeon_heroic_gloryoftheraider", {1, 1, 1})
         end },
     }
 
@@ -133,12 +132,12 @@ local function NagletsToolkitContent()
     ----------------------------------------------------------------
     local missionButtons = {
         { "Reset Combat Data", function()
-            -- Ensure the database exists
+            -- Ensure the database exists.
             if not MissionAccomplishedDB then
                 MissionAccomplishedDB = {}
             end
 
-            -- Clear all combat-related data
+            -- Clear all combat-related data.
             MissionAccomplishedDB.lowestHP        = nil
             MissionAccomplishedDB.highestDamage   = 0
             MissionAccomplishedDB.totalDamage     = 0
@@ -149,12 +148,11 @@ local function NagletsToolkitContent()
             MissionAccomplishedDB.enemiesPerHour  = 0
 
             local msg = "All combat data has been cleared."
-            print("[Naglet's Toolkit] Combat data cleared!")
-            MissionAccomplished.GavrialsCall.DisplayMessage("Combat Data", msg, "Interface\\Icons\\INV_Misc_QuestionMark", {1, 1, 1})
+            MissionAccomplished.GavrialsCall.DisplayMessage("Combat Data", msg, "Interface\\Icons\\spell_misc_hellifrepvpcombatmorale", {1, 1, 1})
         end },
         { "Test Event Functions", function()
             if not (MissionAccomplished and MissionAccomplished.GavrialsCall) then
-                print("[Naglet's Toolkit] MissionAccomplished.GavrialsCall not found.")
+                MissionAccomplished.GavrialsCall.DisplayMessage("Error", "MissionAccomplished.GavrialsCall not found.", "Interface\\Icons\\INV_Misc_QuestionMark", {1, 1, 1})
                 return
             end
 
@@ -194,7 +192,6 @@ local function NagletsToolkitContent()
             local playerName = UnitName("player") or "You"
             for _, eventString in ipairs(testEvents) do
                 HandleEventMessageLocal(eventString, playerName)
-                print("[Naglet's Toolkit] Triggered local event: " .. eventString)
             end
         end },
         { "Send Progress", function()
@@ -212,13 +209,12 @@ local function NagletsToolkitContent()
                 MissionAccomplished.GavrialsCall.DisplayMessage(playerName, noGuildMsg, "Interface\\Icons\\INV_Misc_Token_OrcTroll", {1, 0.2, 0.2})
                 return
             end
-            -- Use the SendAddonMessage wrapper with table parameters.
+            -- Broadcast your progress to your guild.
             MissionAccomplished.GavrialsCall.SendAddonMessage({
                 prefix  = MissionAccomplished.GavrialsCall.PREFIX or "MissionAcc",
                 message = "Progress:" .. msg,
                 channel = "GUILD",
             })
-            print("[Naglet's Toolkit] Sent progress to guild.")
         end },
     }
 
@@ -235,53 +231,21 @@ local function NagletsToolkitContent()
             local msg = "Clearing cache and reloading UI!"
             MissionAccomplished.GavrialsCall.DisplayMessage("System", msg, "Interface\\Icons\\INV_Misc_QuestionMark", {1, 1, 1})
             C_Timer.After(0.5, function() ReloadUI() end)
-            print("[Naglet's Toolkit] Reloading UI in 0.5 seconds...")
         end },
         { "Show FPS", function()
             local fps = GetFramerate()
             local msg = "Your current FPS is " .. math.floor(fps) .. "."
-            print("[Naglet's Toolkit] " .. msg)
             MissionAccomplished.GavrialsCall.DisplayMessage("Current FPS", tostring(math.floor(fps)), "Interface\\Icons\\Spell_Holy_GreaterBlessingofKings", {1, 1, 1})
         end },
         { "Take Screenshot", function()
             Screenshot()
             local msg = "I've taken a screenshot for you."
             MissionAccomplished.GavrialsCall.DisplayMessage("Screenshot", msg, "Interface\\Icons\\INV_Misc_QuestionMark", {1, 1, 1})
-            print("[Naglet's Toolkit] Screenshot taken.")
         end },
     }
 
     ----------------------------------------------------------------
     -- Create the button groups
-    ----------------------------------------------------------------
-    local function CreateButton(parent, text, point, onClickScript)
-        local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-        button:SetSize(150, 40)
-        button:SetPoint(unpack(point))
-        button:SetText(text)
-        button:SetScript("OnClick", onClickScript)
-        return button
-    end
-
-    local function CreateButtonGroup(header, buttonData, startX, startY, parent)
-        local x, y = startX, startY
-        local columnSpacing = 160
-        local rowSpacing = -50
-
-        for i, data in ipairs(buttonData) do
-            local text, script = unpack(data)
-            CreateButton(parent, text, { "TOPLEFT", header, "BOTTOMLEFT", x, y }, script)
-            if i % 2 == 0 then
-                x = startX
-                y = y + rowSpacing
-            else
-                x = x + columnSpacing
-            end
-        end
-    end
-
-    ----------------------------------------------------------------
-    -- Create the main toolkit frame content
     ----------------------------------------------------------------
     CreateButtonGroup(inGameHeader,  inGameButtons,  0, -10, toolkitFrame)
     CreateButtonGroup(missionHeader, missionButtons, 0, -10, toolkitFrame)
