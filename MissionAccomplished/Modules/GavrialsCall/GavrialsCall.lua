@@ -9,7 +9,9 @@
 -- stored in GavrialsCall.messageLog.
 --=============================================================================
 
--- Basic configuration
+----------------------------------------
+-- Basic Configuration and Constants
+----------------------------------------
 local FRAME_WIDTH    = 400
 local FRAME_HEIGHT   = 60
 local FRAME_STYLE    = "Organic"
@@ -18,12 +20,10 @@ local FADE_OUT_TIME  = 1.0
 local MAX_QUEUE_SIZE = 10
 local PREFIX         = "MissionAcc"
 
--- Dynamic font sizing
 local MAX_FONT_SIZE         = 14
 local MIN_FONT_SIZE         = 10
 local TEXT_LENGTH_THRESHOLD = 50
 
--- Dynamic display duration
 local MIN_DISPLAY_TIME      = 5
 local MessageDurationMapping = {
     { maxLength = 50,       duration = 7 },
@@ -33,108 +33,160 @@ local MessageDurationMapping = {
 }
 local DISPLAY_TIME = 7
 
--- Message queue
-local QUEUE = {}
+-- New constant: the idle delay (in seconds) after which a tip is shown.
+local IDLE_TIP_DELAY = 10  -- Reduced from 60 seconds for quicker tip display
 
--- Ensure addon table
+----------------------------------------
+-- Message Queue and Library References
+----------------------------------------
+local QUEUE = {}  -- Used for animation queuing
+
 MissionAccomplished = MissionAccomplished or {}
 MissionAccomplished.GavrialsCall = MissionAccomplished.GavrialsCall or {}
 _G.GavrialsCall = MissionAccomplished.GavrialsCall
 local GavrialsCall = _G.GavrialsCall
 
--- Throttles
 local ADDON_VERSION          = "1.1"
 local ADDON_MESSAGE_THROTTLE = 1
 local lastAddonMessageTime   = 0
 
--- Library references
 local LibSerialize = LibStub("LibSerialize")
 local LibDeflate   = LibStub("LibDeflate")
 
--- Basic state
+----------------------------------------
+-- Basic State
+----------------------------------------
 GavrialsCall.isPersistent             = false
 GavrialsCall.healthThresholds         = {75, 50, 25, 10}
 GavrialsCall.healthThresholdsNotified = {}
 GavrialsCall.previousInstanceName     = nil
 GavrialsCall.lastMessage              = nil
 GavrialsCall.lastMessageTime          = 0
-GavrialsCall.lastMessageCooldown      = 60
+GavrialsCall.lastMessageCooldown      = 60  -- in seconds
+
+-- Flag used to notify the user that the frame is enabled.
+GavrialsCall.frameEnabledNotified = false
 
 local welcomeShown = false
 local prevGuildOnline = {}
 
-------------------------------------------------------------------------------
--- Gavrials Tips Table
-------------------------------------------------------------------------------
-local GAVRIALS_TIPS = {
-    { text = "Close Call from The Warrior, Gavrial the 1st: Trust Your Gut – If you have a bad feeling about an enemy or quest, skip it.", icon = "Interface\\Icons\\Ability_Rogue_FeignDeath" },
-    { text = "Close Call from The Warrior, Gavrial the 1st: Group Up – Strength in numbers—team up whenever possible.", icon = "Interface\\Icons\\inv_misc_groupneedmore" },
-    { text = "Close Call from The Rogue, Gavrial the 2nd: Plan Realistic Escapes – An escape route is essential, but make it practical—many have drowned fleeing through windows.", icon = "Interface\\Icons\\Ability_Rogue_Sprint" },
-    { text = "Final Lesson of The Mage, Gavrial the 3rd: Know Your Limits – Don’t overestimate your strength; play smart.", icon = "Interface\\Icons\\Ability_Defend" },
-    { text = "Close Call from The Druid, Gavrial the 4th: Run, Don’t Die – If things go south, don’t hesitate to run.", icon = "Interface\\Icons\\ability_rogue_sprint" },
-    { text = "Lesson from The Mage, Gavrial the 3rd: Be an Engineer – If you are not confident in your skills as a player, Engineering opens up powerful tools and gadgets that can save your life.", icon = "Interface\\Icons\\Trade_Engineering" },
-    { text = "Lesson from The Mage, Gavrial the 3rd: Train Your Skills – Regularly visit trainers to keep your abilities updated—outdated skills can cost you your life.", icon = "Interface\\Icons\\spell_shadow_scourgebuild" },
-    { text = "Lesson from The Mage, Gavrial the 3rd: Buy Big Bags – Trash in large amounts is worth its weight in gold.", icon = "Interface\\Icons\\INV_Misc_Bag_10" },
-    { text = "Final Lesson of The Shaman, Gavrial the 5th: Play It Safe – If you’re not feeling confident, go for green mobs.", icon = "Interface\\Icons\\Ability_Hunter_SniperShot" },
-    { text = "Final Lesson of The Warrior, Gavrial the 1st: Stick With Friends – When possible, run dungeons with people you know. If not, assume strangers won’t prioritize your safety.", icon = "Interface\\Icons\\INV_Misc_GroupLooking" },
-    { text = "Lesson from The Druid, Gavrial the 4th: Keep Big Pots – Always carry potions, just in case.", icon = "Interface\\Icons\\INV_Potion_54" },
-    { text = "Lesson from The Druid, Gavrial the 4th: Save Gold – Don’t waste money on unnecessary purchases.", icon = "Interface\\Icons\\INV_Misc_Coin_02" },
-    { text = "Lesson from The Rogue, Gavrial the 2nd: Scout Ahead – Use stealth or careful planning to avoid traps.", icon = "Interface\\Icons\\Ability_Stealth" },
-    { text = "Lesson from The Paladin, Gavrial the 6th: Know Your Role – Play to your class’s strengths in groups.", icon = "Interface\\Icons\\Spell_Holy_AuraOfLight" },
-    { text = "Lesson from The Paladin, Gavrial the 6th: Stay Informed – Read up on dungeons, quests, and zones before diving in.", icon = "Interface\\Icons\\INV_Misc_Book_03" },
-    { text = "Final Lesson of The Paladin, Gavrial the 6th: Beware Murlocs – They choose violence and have too many friends.", icon = "Interface\\Icons\\INV_Misc_MonsterHead_02" },
-    { text = "Final Lesson of The Priest, Gavrial the 7th: Happy Healer, Happy Party – Keep your healer safe and supplied!", icon = "Interface\\Icons\\Spell_Holy_Renew" },
-    { text = "Final Lesson of The Druid, Gavrial the 4th: Beware of Caves – In hardcore WoW, caves are death traps—escape routes are rare.", icon = "Interface\\Icons\\Spell_Shadow_DetectLesserInvisibility" },
-    { text = "Lesson from The Hunter, Gavrial the 9th: Play Smart, Not Flashy – Dying at level 32 because of a risky move isn’t impressive—reaching level 60 is the real achievement.", icon = "Interface\\Icons\\Achievement_Level_60" },
-    { text = "Final Lesson of The Warlock, Gavrial the 8th: Log Out Safely – Only log out in safe areas—dungeons are not safe.", icon = "Interface\\Icons\\inv_hearthstonebronze" },
-    { text = "Final Lesson from The Rogue, Gavrial the 2nd: Escape Abilities Can Fail – Vanish, Feign Death, Frost Nova, Blind, and Gouge can be resisted—always have a backup plan.", icon = "Interface\\Icons\\ability_vanish" },
-    { text = "Close Call from The Paladin, Gavrial the 6th: Don’t Risk the Jump – If it looks like you can barely make it, you probably can’t—unless you have fall mitigation abilities.", icon = "Interface\\Icons\\spell_magic_featherfall" },
-    { text = "Close Call from The Hunter, Gavrial the 9th: Assume a High-Level Elite is Always Nearby – Even if you haven’t seen one, there’s probably a powerful roaming elite in your zone. Many players have met their end by assuming otherwise.", icon = "Interface\\Icons\\Ability_Hunter_MarkedForDeath" },
-    { text = "Close Call from The Warlock, Gavrial the 8th: Your Pet Doesn’t Know How to Jump – If you’re playing a Hunter or Warlock, remember: pets take the long way down. It will always choose the death march, pulling half the zone in the process.", icon = "Interface\\Icons\\Ability_Hunter_BeastCall" },
-    { text = "Lesson from The Hunter, Gavrial the 9th: Portals Before Risky Sections of Dungeons Can Be a Lifesaver – Mages dropping portals before dangerous fights can give your group an instant escape option when things go wrong.", icon = "Interface\\Icons\\Spell_Arcane_PortalStormwind" },
-    { text = "Lesson from The Hunter, Gavrial the 9th: Buffs Can Be the Difference Between Life and Death – A well-timed food buff, potion, or world buff might seem minor, but at higher levels, every buff can save you from disaster.", icon = "Interface\\Icons\\Spell_Holy_GreaterBlessingofKings" },
-}
+----------------------------------------
+-- Local Helper Functions
+----------------------------------------
 
-------------------------------------------------------------------------------
--- Helper: Determine if a message is one of the Gavrials tips.
-------------------------------------------------------------------------------
 local function isGavrialsTip(msg)
-    for _, tip in ipairs(GAVRIALS_TIPS) do
-        if tip.text == msg then
+    if not EventsDictionary or not EventsDictionary.allEvents then
+        return false
+    end
+    for key, eventData in pairs(EventsDictionary.allEvents) do
+        if key:sub(1,2) == "GT" and eventData.text == msg then
             return true
         end
     end
     return false
 end
 
-------------------------------------------------------------------------------
+local function GetShortName(fullName)
+    if fullName then
+        local shortName = fullName:match("([^%-]+)")
+        return shortName or fullName
+    end
+    return fullName
+end
+
+local function IsPlayerInGuild(name)
+    local numTotal = GetNumGuildMembers()
+    local shortName = GetShortName(name)
+    for i = 1, numTotal do
+        local guildName = select(1, GetGuildRosterInfo(i))
+        if guildName and GetShortName(guildName):lower() == shortName:lower() then
+            return true
+        end
+    end
+    return false
+end
+
+local function GetPlayerClass(name)
+    if _G.MissionAccomplished_GuildAddonMembers then
+        for _, member in ipairs(_G.MissionAccomplished_GuildAddonMembers) do
+            if GetShortName(member.name):lower() == GetShortName(name):lower() then
+                return member.class or "Unknown"
+            end
+        end
+    end
+    return "Unknown"
+end
+
+local function CleanName(name)
+    if not name then 
+        return "Unknown" 
+    end
+    local clean = name:match("^(.-)%-.+") or name
+    return clean
+end
+
+----------------------------------------
 -- Logging Setup
-------------------------------------------------------------------------------
--- Create a table to hold all log messages for the session.
+----------------------------------------
 GavrialsCall.messageLog = {}
 
--- LogMessage now ignores messages that are Gavrials tips.
-function GavrialsCall.LogMessage(msg)
+function GavrialsCall:LogMessage(msg)
     if isGavrialsTip(msg) then
         return
     end
-
-    local timestamp = date("%H:%M:%S")  -- Get current time.
+    local timestamp = date("%H:%M:%S")
     local logEntry = string.format("[%s] %s", timestamp, msg)
-    table.insert(GavrialsCall.messageLog, logEntry)
-    
-    -- Print the log entry to the default chat frame.
-    -- DEFAULT_CHAT_FRAME:AddMessage(logEntry)
-
-    -- Update the Event Log frame if it exists.
-    if GavrialsCall.logFrame and GavrialsCall.logFrame.UpdateLog then
-        GavrialsCall.logFrame:UpdateLog()
+    table.insert(self.messageLog, logEntry)
+    -- Optionally: DEFAULT_CHAT_FRAME:AddMessage(logEntry)
+    if self.logFrame and self.logFrame.UpdateLog then
+        self.logFrame:UpdateLog()
     end
 end
 
-------------------------------------------------------------------------------
+----------------------------------------
+-- Idle Tip Timer and Random Tip Display
+----------------------------------------
+local idleTipTimerHandle = nil
+
+local function StartIdleTipTimer()
+    if not MissionAccomplishedDB.enableGavrialsTips then return end
+    if idleTipTimerHandle then return end
+    local currentLast = GavrialsCall.lastMessageTime
+    idleTipTimerHandle = C_Timer.NewTimer(IDLE_TIP_DELAY, function()
+        idleTipTimerHandle = nil
+        if MissionAccomplishedDB.enableGavrialsTips and (GetTime() - currentLast) >= IDLE_TIP_DELAY then
+            GavrialsCall:DisplayRandomTip()
+        end
+    end)
+end
+
+function GavrialsCall:CancelIdleTipTimer()
+    if idleTipTimerHandle then
+        idleTipTimerHandle:Cancel()
+        idleTipTimerHandle = nil
+    end
+end
+
+function GavrialsCall:DisplayRandomTip()
+    if not MissionAccomplishedDB.enableGavrialsTips then return end
+    if not EventsDictionary or not EventsDictionary.allEvents then return end
+    local tipEvents = {}
+    for key, eventData in pairs(EventsDictionary.allEvents) do
+        if key:sub(1,2) == "GT" then
+            table.insert(tipEvents, eventData)
+        end
+    end
+    if #tipEvents == 0 then return end
+    local tip = tipEvents[math.random(#tipEvents)]
+    self:DisplayMessage("", tip.text, tip.icon, {1, 1, 1})
+    if tip.sound then
+        self:PlayEventSound(tip.sound)
+    end
+end
+
+----------------------------------------
 -- Communication Functions
-------------------------------------------------------------------------------
+----------------------------------------
 function GavrialsCall:SendAddonMessageCompressed(data, channel)
     if type(data) ~= "table" then
         error("SendAddonMessageCompressed expects a table", 2)
@@ -148,30 +200,21 @@ end
 
 function GavrialsCall:OnAddonMessage(prefix, message, distribution, sender)
     if prefix ~= PREFIX then return end
-
     local decoded = LibDeflate:DecodeForPrint(message)
     if not decoded then return end
-
     local decompressed = LibDeflate:DecompressDeflate(decoded)
     if not decompressed then return end
-
     local success, data = LibSerialize:Deserialize(decompressed)
-    if not success or type(data) ~= "table" then
-        return
-    end
-
+    if not success or type(data) ~= "table" then return end
     local now = GetTime()
-    if now - lastAddonMessageTime < ADDON_MESSAGE_THROTTLE then
-        return
-    end
+    if now - lastAddonMessageTime < ADDON_MESSAGE_THROTTLE then return end
     lastAddonMessageTime = now
-
     if data.cmd then
         local handler = addonCommandHandlers[data.cmd]
         if handler then
             handler(sender, data.payload)
         else
-            GavrialsCall:HandleEventMessage(data.cmd, sender)
+            self:HandleEventMessage(data.cmd, sender)
         end
     end
 end
@@ -190,165 +233,53 @@ function GavrialsCall.SendAddonMessageLegacy(params)
     end
 end
 
+----------------------------------------
+-- Legacy Event Message Handler
+----------------------------------------
 function GavrialsCall:HandleEventMessageLegacy(message, sender)
     local eventName, messageText = strsplit(":", message, 2)
     if not eventName or not messageText then return end
-
-    local iconPath = nil
-    local color    = {1, 1, 1}
-
-    if eventName == "Progress" then
-        iconPath = "Interface\\Icons\\INV_Misc_Map01"
-        color    = {1, 0.8, 0}
-    elseif eventName == "LowHealth" then
-        iconPath = "Interface\\Icons\\INV_Healthstone"
-        color    = {1, 0, 0}
-    elseif eventName == "LevelUp" then
-        iconPath = "Interface\\Icons\\Spell_Holy_Heal"
-        color    = {0, 1, 0}
-    elseif eventName == "PlayerDeath" then
-        iconPath = "Interface\\Icons\\Spell_Shadow_SoulLeech"
-        color    = {0.5, 0, 0}
-    elseif eventName == "EnteredInstance" then
-        iconPath = "Interface\\Icons\\INV_Misc_Map02"
-        color    = {0, 1, 0}
-    elseif eventName == "LeftInstance" then
-        iconPath = "Interface\\Icons\\INV_Misc_Map01"
-        color    = {1, 1, 0}
-    elseif eventName == "GuildDeath" then
-        iconPath = "Interface\\Icons\\INV_Healthstone"
-        color    = {1, 0, 0}
-    elseif eventName == "GuildLevelUp" then
-        iconPath = "Interface\\Icons\\INV_Scroll_01"
-        color    = {0, 1, 0}
-    elseif eventName == "GuildAchievement" then
-        iconPath = "Interface\\Icons\\INV_Misc_Coin_03"
-        color    = {1, 1, 0}
-    elseif eventName == "GuildLowHealth" then
-        iconPath = "Interface\\Icons\\INV_Healthstone"
-        color    = {1, 0, 0}
-    elseif eventName == "GuildEnteredInstance" then
-        iconPath = "Interface\\Icons\\INV_Misc_Map02"
-        color    = {0, 1, 0}
-    elseif eventName == "MaxLevel" then
-        iconPath = "Interface\\Icons\\INV_Misc_Rune_04"
-        color    = {1, 0.84, 0}
-    end
-
-    GavrialsCall.DisplayMessage(sender, messageText, iconPath, color)
-    GavrialsCall.PlayEventSound("Sound\\Interface\\RaidWarning.wav")
-end
-
-------------------------------------------------------------------------------
--- Helper: Strip realm from a full name
-------------------------------------------------------------------------------
-local function GetShortName(fullName)
-    if fullName then
-        local shortName = fullName:match("([^%-]+)")
-        return shortName or fullName
-    end
-    return fullName
-end
-
-------------------------------------------------------------------------------
--- Helper: Check if a player is in your guild
-------------------------------------------------------------------------------
-local function IsPlayerInGuild(name)
-    local numTotal = GetNumGuildMembers()
-    local shortName = GetShortName(name)
-    for i = 1, numTotal do
-        local guildName = select(1, GetGuildRosterInfo(i))
-        if guildName and GetShortName(guildName):lower() == shortName:lower() then
-            return true
-        end
-    end
-    return false
-end
-
-------------------------------------------------------------------------------
--- Helper: Retrieve a player's class
-------------------------------------------------------------------------------
-local function GetPlayerClass(name)
-    if _G.MissionAccomplished_GuildAddonMembers then
-        for _, member in ipairs(_G.MissionAccomplished_GuildAddonMembers) do
-            if GetShortName(member.name):lower() == GetShortName(name):lower() then
-                return member.class or "Unknown"
-            end
-        end
-    end
-    return "Unknown"
-end
-
-------------------------------------------------------------------------------
--- Idle Tip Timer
-------------------------------------------------------------------------------
-local idleTipTimerHandle = nil
-
-local function StartIdleTipTimer()
-    if not MissionAccomplishedDB.enableGavrialsTips then return end
-    if idleTipTimerHandle then return end
-    local currentLast = GavrialsCall.lastMessageTime
-    idleTipTimerHandle = C_Timer.NewTimer(60, function()
-        idleTipTimerHandle = nil
-        if MissionAccomplishedDB.enableGavrialsTips and (GetTime() - currentLast) >= 60 then
-            GavrialsCall.DisplayRandomTip()
-        end
-    end)
-end
-
-function GavrialsCall.CancelIdleTipTimer()
-    if idleTipTimerHandle then
-        idleTipTimerHandle:Cancel()
-        idleTipTimerHandle = nil
-    end
-end
-
-function GavrialsCall.DisplayRandomTip()
-    if not MissionAccomplishedDB.enableGavrialsTips then return end
-    local tip = GAVRIALS_TIPS[math.random(#GAVRIALS_TIPS)]
-    GavrialsCall.DisplayMessage("", tip.text, tip.icon, {1, 1, 1})
-end
-
-------------------------------------------------------------------------------
--- Communication: Send a robust addon message
-------------------------------------------------------------------------------
-function GavrialsCall:SendMessage(cmd, payload, channel)
-    local data = {
-        cmd = cmd,
-        payload = payload
+    local mapping = {
+        Progress             = "PR",
+        LowHealth            = "LH",
+        LevelUp              = "LU",
+        PlayerDeath          = "PlayerDeath",
+        EnteredInstance      = "EI",
+        LeftInstance         = "LI",
+        GuildDeath           = "GD",
+        GuildLevelUp         = "GLU",
+        GuildAchievement     = "GAch",
+        GuildLowHealth       = "GLH",
+        GuildEnteredInstance = "GEI",
+        MaxLevel             = "ML",
     }
-    self:SendAddonMessageCompressed(data, channel)
+    local dictKey = mapping[eventName]
+    if not dictKey then
+        print("Warning: No mapping found for event name:", eventName)
+        return
+    end
+    local eventData = EventsDictionary.allEvents[dictKey]
+    if not eventData then
+        print("Warning: Missing event data for key:", dictKey)
+        return
+    end
+    local color = {1, 1, 1}
+    self:DisplayMessage(sender, messageText, eventData.icon, color)
+    self:PlayEventSound(eventData.sound or "Sound\\Interface\\RaidWarning.wav")
 end
 
-------------------------------------------------------------------------------
--- Legacy SendAddonMessage
-------------------------------------------------------------------------------
-function GavrialsCall.SendAddonMessageLegacy(params)
-    if type(params) ~= "table" then
-        error("SendAddonMessage expects a table parameter", 2)
-    end
-    if C_ChatInfo and type(C_ChatInfo.SendAddonMessage) == "function" then
-        local success, result = pcall(C_ChatInfo.SendAddonMessage, params)
-        if success then
-            return result
-        else
-            return C_ChatInfo.SendAddonMessage(params.prefix, params.message, params.channel)
-        end
-    end
-end
-
-------------------------------------------------------------------------------
--- 1) Reset Health Notifications
-------------------------------------------------------------------------------
-function GavrialsCall.ResetHealthNotifications()
-    for _, threshold in ipairs(GavrialsCall.healthThresholds) do
-        GavrialsCall.healthThresholdsNotified[threshold] = false
+----------------------------------------
+-- Reset Health Notifications
+----------------------------------------
+function GavrialsCall:ResetHealthNotifications()
+    for _, threshold in ipairs(self.healthThresholds) do
+        self.healthThresholdsNotified[threshold] = false
     end
 end
 
-------------------------------------------------------------------------------
--- 2) Build the Notification Banner
-------------------------------------------------------------------------------
+----------------------------------------
+-- UI Functions
+----------------------------------------
 local function ApplyOrganicBanner(frame)
     if not frame.SetBackdrop then return end
     frame:SetBackdrop({
@@ -361,19 +292,16 @@ local function ApplyOrganicBanner(frame)
     })
     frame:SetBackdropColor(0, 0, 0, 0.6)
     frame:SetBackdropBorderColor(1, 1, 1, 1)
-
     local swirlBar = frame:CreateTexture(nil, "ARTWORK")
     swirlBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 6, -6)
     swirlBar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -6, 6)
     swirlBar:SetTexture("Interface\\PetPaperDollFrame\\UI-PetPaperDollFrame-LoyaltyBar")
     swirlBar:SetTexCoord(0, 1, 0, 1)
     swirlBar:SetVertexColor(1, 1, 1, 0.3)
-
     local staticIconSize = 40
     local staticIconFrame = CreateFrame("Frame", nil, frame)
     staticIconFrame:SetSize(staticIconSize, staticIconSize)
     staticIconFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", -15, 15)
-
     local staticIcon = staticIconFrame:CreateTexture(nil, "ARTWORK")
     staticIcon:SetAllPoints(true)
     staticIcon:SetTexture("Interface\\AddOns\\MissionAccomplished\\Contents\\gavicon.blp")
@@ -384,19 +312,15 @@ local function ApplyOrganicBanner(frame)
     end)
     frame.staticIconFrame = staticIconFrame
     frame.staticIcon      = staticIcon
-
     local eventIconSize   = 36
     local eventIconFrame  = CreateFrame("Frame", nil, frame)
     eventIconFrame:SetSize(eventIconSize, eventIconSize)
     eventIconFrame:SetPoint("LEFT", frame, "LEFT", 20, 0)
-
     local eventIcon = eventIconFrame:CreateTexture(nil, "ARTWORK")
     eventIcon:SetAllPoints(true)
     eventIcon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
-
     frame.eventIconFrame = eventIconFrame
     frame.eventIcon       = eventIcon
-
     local messageText = frame:CreateFontString(nil, "OVERLAY")
     messageText:SetPoint("LEFT", frame, "LEFT", 60, 0)
     messageText:SetPoint("RIGHT", frame, "RIGHT", -10, 0)
@@ -408,9 +332,6 @@ local function ApplyOrganicBanner(frame)
     frame.messageText = messageText
 end
 
-------------------------------------------------------------------------------
--- 2.5) Tooltip for the Event Frame
-------------------------------------------------------------------------------
 function MissionAccomplished_Event_ShowTooltip(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
     GameTooltip:AddLine("|cff00ff00MissionAccomplished Notifications|r")
@@ -419,13 +340,75 @@ function MissionAccomplished_Event_ShowTooltip(self)
     GameTooltip:Show()
 end
 
-------------------------------------------------------------------------------
--- 3) Create the Main Event Frame (with Fade Animation)
-------------------------------------------------------------------------------
-function GavrialsCall.CreateFrame()
-    if GavrialsCall.frame then
-        return GavrialsCall.frame
+----------------------------------------
+-- Process Incoming Chat Messages with MAGuildEvent:
+----------------------------------------
+function GavrialsCall:ProcessIncomingCompressedMessage(message)
+    if string.sub(message, 1, 13) ~= "MAGuildEvent:" then return end
+    local data = string.sub(message, 14)
+    local eventCode, remoteSender, extraData = strsplit(",", data)
+    local fullEvent = EventsDictionary.eventTypeLookup[eventCode] or eventCode
+
+    if fullEvent == "Progress" or fullEvent == "PR" then
+        local eventData = EventsDictionary.allEvents.PR
+        if eventData then
+            local localName = UnitName("player")
+            local msg = string.format(eventData.message, remoteSender, extraData)
+            self:DisplayMessage(localName, msg, eventData.icon, {1, 1, 1})
+        end
+    elseif fullEvent == "EnteredInstance" or fullEvent == "EI" then
+        local eventData = EventsDictionary.allEvents.EI
+        if eventData then
+            local msg = string.format(eventData.message, remoteSender)
+            self:DisplayMessage(remoteSender, msg, eventData.icon, {1, 1, 1})
+        end
+    elseif fullEvent == "LowHealth" or fullEvent == "LH" then
+        local eventData = EventsDictionary.allEvents.LH
+        if eventData then
+            local msg = string.format(eventData.message, remoteSender, extraData or "??")
+            self:DisplayMessage(remoteSender, msg, eventData.icon, {1, 1, 1})
+        end
+    elseif fullEvent == "LevelUp" or fullEvent == "LU" then
+        local eventData = EventsDictionary.allEvents.LU
+        if eventData then
+            local level, playerClass = strsplit(",", extraData)
+            local msg = string.format(eventData.message, remoteSender, playerClass, level)
+            self:DisplayMessage(remoteSender, msg, eventData.icon, {1, 1, 1})
+        end
+    elseif fullEvent == "GuildDeath" or fullEvent == "GD" then
+        if extraData == "FD" then return end
+        local eventData = EventsDictionary.allEvents.GD
+        if eventData then
+            local msg = string.format(eventData.message, remoteSender)
+            self:DisplayMessage(remoteSender, msg, eventData.icon, {1, 1, 1})
+        end
+    elseif fullEvent == "MaxLevel" or fullEvent == "ML" then
+        local eventData = EventsDictionary.allEvents.ML
+        if eventData then
+            local msg = string.format(eventData.message, remoteSender)
+            self:DisplayMessage(remoteSender, msg, eventData.icon, {1, 1, 1})
+        end
+    else
+        local fallbackMsg = string.format("%s unleashed an enigma (%s) with data '%s'—mysteries deepen!", remoteSender, eventCode, extraData or "??")
+        self:DisplayMessage(remoteSender, fallbackMsg, "Interface\\Icons\\INV_Misc_QuestionMark", {1, 1, 1})
     end
+end
+
+----------------------------------------
+-- Chat Filter to Process MAGuildEvent: Messages
+----------------------------------------
+ChatFrame_AddMessageEventFilter("CHAT_MSG_CHANNEL", function(self, event, message, sender, ...)
+    if string.sub(message, 1, 13) == "MAGuildEvent:" then
+        GavrialsCall:ProcessIncomingCompressedMessage(message)
+        return false  -- Let the message appear in chat as normal.
+    end
+end)
+
+----------------------------------------
+-- Create the Main Event Frame (with fade animation)
+----------------------------------------
+function GavrialsCall:CreateFrame()
+    if self.frame then return self.frame end
     local frame = CreateFrame("Frame", "MissionAccomplishedGavrialsCallFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     frame:SetSize(FRAME_WIDTH, FRAME_HEIGHT)
     frame:SetPoint("TOP", UIParent, "TOP", 0, -200)
@@ -444,15 +427,19 @@ function GavrialsCall.CreateFrame()
             MissionAccomplishedDB.gavFramePos = { point = point, relPoint = relPoint, x = x, y = y }
         end
     end)
-
     if FRAME_STYLE == "Organic" then
         ApplyOrganicBanner(frame)
     else
         frame:SetBackdrop({ bgFile = "Interface\\Tooltips\\UI-Tooltip-Background" })
         frame:SetBackdropColor(0, 0, 0, 0.5)
     end
-
+    frame:SetScript("OnShow", function(self)
+        if not MissionAccomplishedDB.eventFrameEnabled then
+            self:Hide()
+        end
+    end)
     frame:SetScript("OnEnter", function(self)
+        -- Once the frame is shown, hover functions work normally.
         MissionAccomplished_Event_ShowTooltip(self)
         if self:GetAlpha() < 1 then
             UIFrameFadeIn(self, 0.5, self:GetAlpha(), 1)
@@ -464,91 +451,102 @@ function GavrialsCall.CreateFrame()
             UIFrameFadeOut(self, FADE_OUT_TIME)
         end
     end)
-
     frame.InOut = frame:CreateAnimationGroup()
     local animFadeIn = frame.InOut:CreateAnimation("Alpha")
     animFadeIn:SetOrder(1)
     animFadeIn:SetDuration(FADE_IN_TIME)
     animFadeIn:SetFromAlpha(0)
     animFadeIn:SetToAlpha(1)
-
     local animWait = frame.InOut:CreateAnimation("Alpha")
     animWait:SetOrder(2)
     animWait:SetDuration(DISPLAY_TIME)
     animWait:SetFromAlpha(1)
     animWait:SetToAlpha(1)
     frame.animWait = animWait
-
     local animFadeOut = frame.InOut:CreateAnimation("Alpha")
     animFadeOut:SetOrder(3)
     animFadeOut:SetDuration(FADE_OUT_TIME)
     animFadeOut:SetFromAlpha(1)
     animFadeOut:SetToAlpha(0)
-
     frame.InOut:SetScript("OnFinished", function()
         frame:SetAlpha(0)
         if #QUEUE > 0 then
             local nextMsg = table.remove(QUEUE, 1)
-            GavrialsCall.DisplayMessage(nextMsg.playerName, nextMsg.text, nextMsg.icon, nextMsg.color)
+            GavrialsCall:DisplayMessage(nextMsg.playerName, nextMsg.text, nextMsg.icon, nextMsg.color)
         else
             StartIdleTipTimer()
         end
     end)
-
     frame:Hide()
     if MissionAccomplishedDB and MissionAccomplishedDB.gavFramePos then
         local pos = MissionAccomplishedDB.gavFramePos
         frame:ClearAllPoints()
         frame:SetPoint(pos.point, UIParent, pos.relPoint, pos.x, pos.y)
     end
-    GavrialsCall.frame = frame
+    self.frame = frame
     return frame
 end
 
-------------------------------------------------------------------------------
--- 3.5) Helper: Play Sound for an Event
-------------------------------------------------------------------------------
-function GavrialsCall.PlayEventSound(soundFile)
+----------------------------------------
+-- PlayEventSound: Plays a sound for an event (if enabled).
+----------------------------------------
+function GavrialsCall:PlayEventSound(soundFile)
     if MissionAccomplishedDB and MissionAccomplishedDB.eventSoundsEnabled == false then return end
     if soundFile then
         PlaySoundFile(soundFile, "Master")
     end
 end
 
-------------------------------------------------------------------------------
--- 4) DisplayMessage (with Logging)
-------------------------------------------------------------------------------
-function GavrialsCall.DisplayMessage(sender, text, iconPath, color, skipSender)
-    if not GavrialsCall.frame then 
-        GavrialsCall.CreateFrame() 
+----------------------------------------
+-- DisplayMessage: Logs the message and shows a notification on the main event frame.
+-- Even if the event box is disabled, the message is still logged.
+----------------------------------------
+function GavrialsCall:DisplayMessage(sender, text, iconPath, color)
+    local player = UnitName("player")
+    if sender and sender ~= "" and GetShortName(sender):lower() == (player and player:lower() or "") then
+        sender = ""
     end
-    local frame = GavrialsCall.frame
-
-    -- If a message is already playing, queue this one (including the skipSender flag)
+    local prefix = ""
+    if sender and sender ~= "" then
+        prefix = GetShortName(sender) .. ", "
+    end
+    local msgFormatted = prefix .. (text or "")
+    
+    -- Duplicate filtering: if the same message was processed within the cooldown, skip it.
+    local now = GetTime()
+    if self.lastMessage == msgFormatted and (now - self.lastMessageTime) < self.lastMessageCooldown then
+        return
+    end
+    self.lastMessage = msgFormatted
+    self.lastMessageTime = now
+    
+    -- Always log the message.
+    self:LogMessage(msgFormatted)
+    
+    -- Only display the UI if the event box is enabled.
+    if not MissionAccomplishedDB.eventFrameEnabled then
+        return
+    end
+    if not self.frame then self:CreateFrame() end
+    local frame = self.frame
     if frame:IsShown() and frame.InOut:IsPlaying() then
+        for _, queuedMsg in ipairs(QUEUE) do
+            if queuedMsg.playerName == sender and queuedMsg.text == text then
+                return  -- Duplicate in queue; do not add.
+            end
+        end
         if #QUEUE < MAX_QUEUE_SIZE then
-            table.insert(QUEUE, {
-                playerName = sender,
-                text = text,
-                icon = iconPath,
-                color = color,
-                skipSender = skipSender
-            })
+            table.insert(QUEUE, { playerName = sender, text = text, icon = iconPath, color = color })
         end
         return
     end
-
     local baseFontSize = MAX_FONT_SIZE
     local textLength   = text and #text or 0
     if textLength > TEXT_LENGTH_THRESHOLD then
         local reduction = math.floor((textLength - TEXT_LENGTH_THRESHOLD) / 20)
         baseFontSize = math.max(MIN_FONT_SIZE, MAX_FONT_SIZE - reduction)
     end
-    if sender == "" then
-        baseFontSize = math.max(MIN_FONT_SIZE, baseFontSize - 2)
-    end
     frame.messageText:SetFont("Fonts\\FRIZQT__.TTF", baseFontSize, "OUTLINE")
-
     local messageDuration = MIN_DISPLAY_TIME
     for _, mapping in ipairs(MessageDurationMapping) do
         if textLength <= mapping.maxLength then
@@ -556,29 +554,7 @@ function GavrialsCall.DisplayMessage(sender, text, iconPath, color, skipSender)
             break
         end
     end
-    if frame.animWait then 
-        frame.animWait:SetDuration(messageDuration) 
-    end
-
-    -- Determine whether to prepend the sender's name.
-    local currentPlayer = UnitName("player")
-    local prefix = ""
-    -- Only add the sender prefix if skipSender is not set and the sender is not the current player.
-    if not skipSender and sender and sender ~= "" and sender ~= currentPlayer then
-        prefix = GetShortName(sender) .. ", "
-    end
-    local msgFormatted = prefix .. (text or "")
-
-    -- Log the message for session history (ignoring tip messages).
-    GavrialsCall.LogMessage(msgFormatted)
-
-    local now = GetTime()
-    if GavrialsCall.lastMessage == msgFormatted and (now - GavrialsCall.lastMessageTime) < GavrialsCall.lastMessageCooldown then
-        return
-    end
-    GavrialsCall.lastMessage = msgFormatted
-    GavrialsCall.lastMessageTime = now
-
+    if frame.animWait then frame.animWait:SetDuration(messageDuration) end
     frame.messageText:SetText(msgFormatted)
     if iconPath and type(iconPath) == "string" then
         frame.eventIcon:SetTexture(iconPath)
@@ -590,7 +566,6 @@ function GavrialsCall.DisplayMessage(sender, text, iconPath, color, skipSender)
     else
         frame.messageText:SetTextColor(1, 1, 1)
     end
-
     frame.InOut:Stop()
     frame:SetAlpha(0)
     frame:Show()
@@ -598,260 +573,346 @@ function GavrialsCall.DisplayMessage(sender, text, iconPath, color, skipSender)
     StartIdleTipTimer()
 end
 
-------------------------------------------------------------------------------
--- 5) Show / Hide Functions
-------------------------------------------------------------------------------
-function GavrialsCall.Show(persistent)
-    if persistent then
-        GavrialsCall.isPersistent = true
-        if GavrialsCall.frame then
-            GavrialsCall.frame.InOut:Stop()
-            GavrialsCall.frame:SetAlpha(1)
-            GavrialsCall.frame:Show()
+----------------------------------------
+-- New: NotifyFrameEnabled – shows a one‑time “Event Box Enabled” message.
+----------------------------------------
+function GavrialsCall:NotifyFrameEnabled()
+    self:DisplayMessage("", "Event Box Enabled", "Interface\\Icons\\INV_Misc_ChatBubble_01", {0, 1, 0})
+end
+
+----------------------------------------
+-- New: SendLocalProgress – sends a local progress event message to the user.
+-- (Assumes that MissionAccomplished_GetProgressPercentage is defined elsewhere.)
+----------------------------------------
+function GavrialsCall:SendLocalProgress()
+    local progressPct = MissionAccomplished_GetProgressPercentage and MissionAccomplished_GetProgressPercentage() or 0
+    local rounded = math.floor(progressPct + 0.5)
+    local eventData = EventsDictionary.allEvents.PR
+    if eventData then
+        local formattedMessage = string.format(eventData.message, UnitName("player"), rounded)
+        self:DisplayMessage(UnitName("player"), formattedMessage, eventData.icon, {1, 1, 1})
+    end
+end
+
+----------------------------------------
+-- Show and Hide Functions
+----------------------------------------
+function GavrialsCall:Show(persistent)
+    if not MissionAccomplishedDB.eventFrameEnabled then
+        self:Hide()
+        return  -- Do not show if the event box is disabled.
+    end
+
+    -- Simulate PLAYER_ENTERING_WORLD / login behavior when enabling the Event Box:
+    if not welcomeShown then
+        local playerName  = UnitName("player") or "Player"
+        local playerLevel = UnitLevel("player") or 1
+        if playerLevel >= 60 then
+            local eventData = EventsDictionary.allEvents.Welcome60
+            local formattedMessage = string.format(eventData.message, playerName)
+            self:DisplayMessage("", formattedMessage, eventData.icon, {1, 1, 1})
+            self:PlayEventSound(eventData.sound)
         else
-            GavrialsCall.CreateFrame()
-            GavrialsCall.frame.InOut:Stop()
-            GavrialsCall.frame:SetAlpha(1)
-            GavrialsCall.frame:Show()
+            local xpSoFar = MissionAccomplished.GetTotalXPSoFar() or 0
+            local xpMax   = MissionAccomplished.GetXPMaxTo60() or 1
+            local remain  = xpMax - xpSoFar
+            if remain < 0 then remain = 0 end
+            local pct = (xpSoFar / xpMax) * 100
+            local eventData = EventsDictionary.allEvents.Welcome
+            local formattedMessage = string.format(eventData.message, playerName, pct, remain)
+            self:DisplayMessage("", formattedMessage, eventData.icon, {1, 1, 1})
+            self:PlayEventSound(eventData.sound)
+        end
+        welcomeShown = true
+    end
+
+    -- Reset the idle timer so that if no other events occur, a tip will appear promptly.
+    self.lastMessageTime = GetTime() - IDLE_TIP_DELAY
+
+    if not self.frameEnabledNotified then
+        self:NotifyFrameEnabled()
+        self.frameEnabledNotified = true
+        self:SendLocalProgress()  -- Send local progress when enabling.
+    end
+    self.isPersistent = persistent and true or false
+    if self.frame then
+        self.frame.InOut:Stop()
+        if persistent then
+            self.frame:SetAlpha(1)
+        else
+            self.frame:SetAlpha(0)
+        end
+        self.frame:Show()
+        if not persistent then
+            self.frame.InOut:Play()
         end
     else
-        GavrialsCall.isPersistent = false
-        if GavrialsCall.frame then
-            GavrialsCall.frame.InOut:Stop()
-            GavrialsCall.frame:SetAlpha(0)
-            GavrialsCall.frame:Show()
-            GavrialsCall.frame.InOut:Play()
+        self:CreateFrame()
+        self.frame.InOut:Stop()
+        if persistent then
+            self.frame:SetAlpha(1)
         else
-            GavrialsCall.CreateFrame()
+            self.frame:SetAlpha(0)
+        end
+        self.frame:Show()
+        if not persistent then
+            self.frame.InOut:Play()
         end
     end
 end
 
-function GavrialsCall.Hide()
-    if GavrialsCall.frame then
-        GavrialsCall.isPersistent = false
-        GavrialsCall.frame.InOut:Stop()
-        UIFrameFadeOut(GavrialsCall.frame, FADE_OUT_TIME)
+function GavrialsCall:Hide()
+    if self.frame then
+        self.isPersistent = false
+        self.frame.InOut:Stop()
+        self.frame:Hide()  -- Immediately hide the frame.
     end
+    self.frameEnabledNotified = false
 end
 
-------------------------------------------------------------------------------
--- Helper: Display Guild Online Message (Initial Count)
-------------------------------------------------------------------------------
-local function DisplayGuildOnlineMessage()
-    GuildRoster()
-    C_Timer.After(3, function()
-        local numTotal = GetNumGuildMembers()
-        local onlineCount = 0
-        for i = 1, numTotal do
-            local name, _, _, _, _, _, _, _, isOnline = GetGuildRosterInfo(i)
-            if isOnline and name then
-                onlineCount = onlineCount + 1
-            end
-        end
-        if onlineCount > 0 then
-            local eventData = EventsDictionary.allEvents.GA  -- Guild Amount event
-            local formattedMessage = string.format(eventData.message, onlineCount)
-            GavrialsCall.DisplayMessage(UnitName("player"), formattedMessage, eventData.icon, {0.2, 0.8, 1})
-        end
-    end)
-end
-
-------------------------------------------------------------------------------
--- 6) Show a “Welcome Back” Message Once using EventsDictionary
-------------------------------------------------------------------------------
-local function DisplayWelcomeTextOnce()
-    if welcomeShown then return end
-    welcomeShown = true
-
-    local playerName  = UnitName("player") or "Player"
-    local playerLevel = UnitLevel("player") or 1
-
-    if playerLevel >= 60 then
-        local eventData = EventsDictionary.allEvents.Welcome60
-        local formattedMessage = string.format(eventData.message, playerName)
-        GavrialsCall.DisplayMessage("", formattedMessage, eventData.icon, {1, 1, 1})
-        GavrialsCall.PlayEventSound(eventData.sound)
-    else
-        local xpSoFar = MissionAccomplished.GetTotalXPSoFar() or 0
-        local xpMax   = MissionAccomplished.GetXPMaxTo60() or 1
-        local remain  = xpMax - xpSoFar
-        if remain < 0 then remain = 0 end
-        local pct = (xpSoFar / xpMax) * 100
-        local eventData = EventsDictionary.allEvents.Welcome
-        local formattedMessage = string.format(eventData.message, playerName, pct, remain)
-        GavrialsCall.DisplayMessage("", formattedMessage, eventData.icon, {1, 1, 1})
-        GavrialsCall.PlayEventSound(eventData.sound)
-    end
-
-    if GetGuildInfo("player") then
-        C_Timer.After(4, DisplayGuildOnlineMessage)
-    end
-end
-
-------------------------------------------------------------------------------
--- 7) Handle Event Message (fallback)
-------------------------------------------------------------------------------
-function GavrialsCall.HandleEventMessage(message, sender)
-    GavrialsCall:HandleEventMessageLegacy(message, sender)
-end
-
-------------------------------------------------------------------------------
--- 8) Handle Character Events (Local or Guild) using EventsDictionary
-------------------------------------------------------------------------------
-function GavrialsCall.HandleCharacterEvent(event, ...)
+----------------------------------------
+-- Event Handling Helpers
+----------------------------------------
+local function handlePlayerLevelUp(self, newLevel)
     local pName = UnitName("player") or "Player"
-
-    if event == "PLAYER_LEVEL_UP" then
-        local newLevel = ...
-        if newLevel == 60 then
-            local eventData = EventsDictionary.allEvents.ML
-            local formattedMessage = string.format(eventData.message, pName)
-            local guildName = GetGuildInfo("player")
-            if guildName then
-                GavrialsCall:SendMessage("ML", formattedMessage, "GUILD")
-            else
-                GavrialsCall.DisplayMessage(pName, formattedMessage, eventData.icon, {1, 1, 1})
-            end
-            GavrialsCall.PlayEventSound(eventData.sound)
+    if newLevel == 60 then
+        local eventData = EventsDictionary.allEvents.ML
+        local formattedMessage = string.format(eventData.message, pName)
+        local guildName = GetGuildInfo("player")
+        if guildName then
+            self:SendMessage("ML", formattedMessage, "GUILD")
         else
-            local eventData = EventsDictionary.allEvents.LU
-            local formattedMessage = string.format(eventData.message, pName, newLevel)
-            local guildName = GetGuildInfo("player")
-            if guildName then
-                GavrialsCall:SendMessage("LU", formattedMessage, "GUILD")
-            else
-                GavrialsCall.DisplayMessage(pName, formattedMessage, eventData.icon, {0, 1, 0})
-            end
-            GavrialsCall.PlayEventSound(eventData.sound)
+            self:DisplayMessage(pName, formattedMessage, eventData.icon, {1, 1, 1})
         end
+        self:PlayEventSound(eventData.sound)
+    else
+        local eventData = EventsDictionary.allEvents.LU
+        local formattedMessage = string.format(eventData.message, pName, newLevel)
+        local guildName = GetGuildInfo("player")
+        if guildName then
+            self:SendMessage("LU", formattedMessage, "GUILD")
+        else
+            self:DisplayMessage(pName, formattedMessage, eventData.icon, {0, 1, 0})
+        end
+        self:PlayEventSound(eventData.sound)
+    end
+end
 
-    elseif event == "UNIT_HEALTH" then
-        local unit = ...
-        if unit == "player" then
-            local health = UnitHealth("player")
-            local maxHealth = UnitHealthMax("player")
-            local pct = (health / maxHealth) * 100
-            for _, threshold in ipairs(GavrialsCall.healthThresholds) do
-                if pct <= threshold and not GavrialsCall.healthThresholdsNotified[threshold] then
-                    local eventData = EventsDictionary.allEvents.LH
-                    local formattedMessage = string.format(eventData.message, pName, math.floor(pct))
-                    GavrialsCall.DisplayMessage(pName, formattedMessage, eventData.icon, {1, 0, 0})
-                    GavrialsCall.PlayEventSound(eventData.sound)
-                    GavrialsCall.healthThresholdsNotified[threshold] = true
+local function handleUnitHealth(self, unit)
+    if unit == "player" then
+        local pName = UnitName("player") or "Unknown"
+        local health = UnitHealth("player")
+        local maxHealth = UnitHealthMax("player")
+        if maxHealth == 0 then return end
+        local pct = (health / maxHealth) * 100
+        for _, threshold in ipairs(self.healthThresholds) do
+            if pct <= threshold and not self.healthThresholdsNotified[threshold] then
+                local eventData = EventsDictionary.allEvents.LH
+                local formattedMessage = string.format(eventData.message, pName, math.floor(pct))
+                self:DisplayMessage(pName, formattedMessage, eventData.icon, {1, 0, 0})
+                self:PlayEventSound(eventData.sound)
+                self.healthThresholdsNotified[threshold] = true
+                if threshold == 10 then
+                    local guildName = GetGuildInfo("player")
+                    if guildName then
+                        OnGuildEventOccurred("LH", pName, math.floor(pct))
+                    end
                 end
             end
-            local allNotified = true
-            for _, thr in ipairs(GavrialsCall.healthThresholds) do
-                if pct > thr then
-                    allNotified = false
+        end
+        local allNotified = true
+        for _, thr in ipairs(self.healthThresholds) do
+            if pct > thr then
+                allNotified = false
+                break
+            end
+        end
+        if allNotified then
+            self:ResetHealthNotifications()
+        end
+    end
+end
+
+local function handlePlayerDead(self)
+    local pName = UnitName("player") or "Player"
+    local guildName = GetGuildInfo("player")
+    if guildName then
+        local eventData = EventsDictionary.allEvents.GD
+        local formattedMessage = string.format(eventData.message, pName)
+        self:SendMessage("GD", formattedMessage, "GUILD")
+        self:PlayEventSound(eventData.sound)
+    else
+        local eventData = EventsDictionary.allEvents.PlayerDeath
+        local formattedMessage = string.format(eventData.message, pName)
+        self:DisplayMessage(pName, formattedMessage, eventData.icon, {0.5, 0, 0})
+        self:PlayEventSound(eventData.sound)
+    end
+end
+
+local function handleUpdateExhaustion(self)
+    local pName = UnitName("player") or "Player"
+    local guildName = GetGuildInfo("player")
+    local xpPct = MissionAccomplished_GetProgressPercentage() or 0
+    local rounded = math.floor(xpPct + 0.5)
+    local eventData = EventsDictionary.allEvents.PR
+    local formattedMessage = string.format(eventData.message, pName, rounded)
+    if guildName then
+        self:SendMessage("PR", formattedMessage, "GUILD")
+    else
+        self:DisplayMessage(pName, formattedMessage, eventData.icon, {0.7, 0.7, 1})
+    end
+    self:PlayEventSound(eventData.sound)
+end
+
+local function handleUnitAura(self, unit)
+    if unit == "player" then
+        local pName = UnitName("player") or "Player"
+        if not self.activeBuffs then self.activeBuffs = {} end
+        local currentBuffs = {}
+        local index = 1
+        while true do
+            local buffName, icon, count, debuffType, duration, expirationTime, unitCaster = UnitBuff("player", index)
+            if not buffName then break end
+            currentBuffs[buffName] = { icon = EventsDictionary.allEvents.BE.icon, expirationTime = expirationTime, duration = duration }
+            index = index + 1
+        end
+        local buffChangeAnnounced = false
+        for buffName, data in pairs(currentBuffs) do
+            if not self.activeBuffs[buffName] then
+                local eventData = EventsDictionary.allEvents.BE
+                local formattedMessage = string.format(eventData.messageGain, pName, buffName)
+                self:DisplayMessage(pName, formattedMessage, eventData.icon, {0, 1, 1})
+                self:PlayEventSound(eventData.sound)
+                buffChangeAnnounced = true
+                break
+            end
+        end
+        if not buffChangeAnnounced then
+            for buffName, data in pairs(self.activeBuffs) do
+                if not currentBuffs[buffName] then
+                    local eventData = EventsDictionary.allEvents.BE
+                    local formattedMessage = string.format(eventData.messageLost, pName, buffName)
+                    self:DisplayMessage(pName, formattedMessage, eventData.icon, {1, 0, 0})
+                    self:PlayEventSound(eventData.sound)
                     break
                 end
             end
-            if allNotified then
-                GavrialsCall.ResetHealthNotifications()
-            end
         end
-
-    elseif event == "PLAYER_DEAD" then
-        local guildName = GetGuildInfo("player")
-        if guildName then
-            local eventData = EventsDictionary.allEvents.GD
-            local formattedMessage = string.format(eventData.message, pName)
-            GavrialsCall:SendMessage("GD", formattedMessage, "GUILD")
-            GavrialsCall.PlayEventSound(eventData.sound)
-        else
-            local eventData = EventsDictionary.allEvents.PlayerDeath
-            local formattedMessage = string.format(eventData.message, pName)
-            GavrialsCall.DisplayMessage(pName, formattedMessage, eventData.icon, {0.5, 0, 0})
-            GavrialsCall.PlayEventSound(eventData.sound)
-        end
-
-    elseif event == "PLAYER_ENTERING_WORLD" then
-        -- Do nothing; instance entry is handled elsewhere.
-    
-    elseif event == "UPDATE_EXHAUSTION" then
-        local guildName = GetGuildInfo("player")
-        local xpPct = MissionAccomplished.GetProgressPercentage() or 0
-        local rounded = math.floor(xpPct + 0.5)
-        local eventData = EventsDictionary.allEvents.PR
-        local formattedMessage = string.format(eventData.message, pName, rounded)
-        if guildName then
-            GavrialsCall:SendMessage("PR", formattedMessage, "GUILD")
-        else
-            GavrialsCall.DisplayMessage(pName, formattedMessage, eventData.icon, {0.7, 0.7, 1})
-        end
-        GavrialsCall.PlayEventSound(eventData.sound)
-
-    elseif event == "UNIT_AURA" then
-        -- your existing code for buffs
-    elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
-        -- your existing code for big hits / group deaths
-    elseif event == "GUILD_ROSTER_UPDATE" then
-        -- your existing code for guild members coming online
-    elseif event == "CHAT_MSG_SYSTEM" then
-        local sysMsg = select(1, ...)
-        GavrialsCall.HandleSystemMessage(sysMsg)
+        self.activeBuffs = currentBuffs
     end
 end
 
-------------------------------------------------------------------------------
--- New: Handle System Message for level 60 using local fallback info 
-------------------------------------------------------------------------------
-function GavrialsCall.HandleSystemMessage(message, ...)
-    -- Look for a message like "PlayerName has reached level 60!"
+local function handleCombatLogEvent(self)
+    local pName = UnitName("player") or "Player"
+    local timestamp, subevent, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags,
+          destGUID, destName, destFlags, destRaidFlags, spellId, spellName, spellSchool, amount = CombatLogGetCurrentEventInfo()
+    if subevent == "SPELL_DAMAGE" and sourceName == pName then
+        local currentHealth = UnitHealth("player")
+        if amount and currentHealth and amount > (currentHealth * 0.30) then
+            local eventData = EventsDictionary.allEvents.BH
+            local formattedMessage = string.format(eventData.message, pName, destName or "an enemy", amount)
+            self:DisplayMessage(pName, formattedMessage, eventData.icon, {1, 0.5, 0})
+            self:PlayEventSound(eventData.sound)
+        end
+    end
+end
+
+local function handleGuildRosterUpdate(self)
+    local pName = UnitName("player") or "Player"
+    GuildRoster()
+    local numTotal = GetNumGuildMembers()
+    local eventData = EventsDictionary.allEvents.GR
+    if not self.announcedGuildMembers then
+        self.announcedGuildMembers = {}
+        for i = 1, numTotal do
+            local fullName = select(1, GetGuildRosterInfo(i))
+            if fullName then
+                local cleanName = CleanName(fullName)
+                self.announcedGuildMembers[cleanName] = true
+            end
+        end
+    else
+        for i = 1, numTotal do
+            local fullName, rank, rankIndex, level, class, zone, note, officerNote, isOnline = GetGuildRosterInfo(i)
+            if isOnline then
+                local cleanName = CleanName(fullName)
+                if not self.announcedGuildMembers[cleanName] then
+                    local formattedMessage = string.format(eventData.message, cleanName, class)
+                    self:DisplayMessage(pName, formattedMessage, eventData.icon, {0.2, 0.8, 1})
+                    self:PlayEventSound(eventData.sound)
+                    self.announcedGuildMembers[cleanName] = true
+                end
+            end
+        end
+    end
+end
+
+local function handleChatMsgSystem(self, ...)
+    local sysMsg = select(1, ...)
+    self:HandleSystemMessage(sysMsg)
+end
+
+function GavrialsCall:HandleCharacterEvent(event, ...)
+    local pName = UnitName("player") or "Player"
+    if event == "PLAYER_LEVEL_UP" then
+        local newLevel = ...
+        handlePlayerLevelUp(self, newLevel)
+    elseif event == "UNIT_HEALTH" then
+        local unit = ...
+        handleUnitHealth(self, unit)
+    elseif event == "PLAYER_DEAD" then
+        handlePlayerDead(self)
+    elseif event == "UPDATE_EXHAUSTION" then
+        handleUpdateExhaustion(self)
+    elseif event == "UNIT_AURA" then
+        local unit = ...
+        handleUnitAura(self, unit)
+    elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
+        handleCombatLogEvent(self)
+    elseif event == "GUILD_ROSTER_UPDATE" then
+        handleGuildRosterUpdate(self)
+    elseif event == "CHAT_MSG_SYSTEM" then
+        handleChatMsgSystem(self, ...)
+    elseif event == "PLAYER_ENTERING_WORLD" then
+        -- Do nothing; instance entry is handled elsewhere.
+    end
+end
+
+function GavrialsCall:HandleSystemMessage(message, ...)
     local name = message:match("^(%S+) has reached level 60!$")
+    local playerName = UnitName("player")
+    if name and name == playerName then 
+        return 
+    end
     if name then
         local playerClass, guildName
         if IsPlayerInGuild(name) then
-            -- If the player is in your guild, retrieve their class info and guild name.
             playerClass = GetPlayerClass(name)
             guildName = GetGuildInfo("player") or "No Guild"
         else
-            -- If not in your guild, default to "Adventurer" and "Azeroth."
             playerClass = "Adventurer"
             guildName = "Azeroth"
         end
-
-        -- Retrieve the EP event data from the centralized dictionary.
         local eventData = EventsDictionary.allEvents.EP
         if not eventData then
             print("Warning: Missing EP event data in EventsDictionary.allEvents.")
-            return  -- Optionally, exit the function to avoid an error.
+            return
         end
-
         local formattedMessage = string.format(eventData.message, name, playerClass, guildName)
-        GavrialsCall.DisplayMessage("", formattedMessage, eventData.icon, {1, 0.84, 0})
-        GavrialsCall.PlayEventSound(eventData.sound)
-    end
-end
-
-------------------------------------------------------------------------------
--- Global Callback Registration
-------------------------------------------------------------------------------
-MissionAccomplished._callbacks = MissionAccomplished._callbacks or {}
-function MissionAccomplished.RegisterCallback(event, callback)
-    MissionAccomplished._callbacks[event] = MissionAccomplished._callbacks[event] or {}
-    table.insert(MissionAccomplished._callbacks[event], callback)
-end
-
-local function TriggerCallbacks(event, ...)
-    if MissionAccomplished._callbacks[event] then
-        for _, cb in ipairs(MissionAccomplished._callbacks[event]) do
-            pcall(cb, event, ...)
-        end
+        self:DisplayMessage("", formattedMessage, eventData.icon, {1, 0.84, 0})
+        self:PlayEventSound(eventData.sound)
     end
 end
 
 ------------------------------------------------------------------------------
 -- Modular Command Handlers
 ------------------------------------------------------------------------------
-local addonCommandHandlers = {
+addonCommandHandlers = {
     EnableEventFrame = function(sender, payload)
-        GavrialsCall.Show(false)
+        GavrialsCall:Show(false)
     end,
     DisableEventFrame = function(sender, payload)
-        GavrialsCall.Hide()
+        GavrialsCall:Hide()
     end,
     AddonPing = function(sender, payload)
         local playerName = UnitName("player") or "Player"
@@ -859,9 +920,7 @@ local addonCommandHandlers = {
         local class      = select(1, UnitClass("player")) or "Unknown"
         local level      = UnitLevel("player") or 1
         local progress   = MissionAccomplished.GetProgressPercentage() or 0
-        local replyPayload = string.format(
-            "%s;%s;%s;%d;%.1f;%s", playerName, race, class, level, progress, ADDON_VERSION
-        )
+        local replyPayload = string.format("%s;%s;%s;%d;%.1f;%s", playerName, race, class, level, progress, ADDON_VERSION)
         GavrialsCall:SendMessage("AddonReply", replyPayload, "GUILD")
     end,
     AddonReply = function(sender, payload)
@@ -882,9 +941,7 @@ local addonCommandHandlers = {
             end
         end
         if not updated then
-            table.insert(_G.MissionAccomplished_GuildAddonMembers, {
-                name = name, race = race, class = class, level = level, progress = progress, version = version
-            })
+            table.insert(_G.MissionAccomplished_GuildAddonMembers, { name = name, race = race, class = class, level = level, progress = progress, version = version })
         end
     end,
     ProfessionData = function(sender, payload)
@@ -898,18 +955,40 @@ local addonCommandHandlers = {
             end
         end
         if not updated then
-            table.insert(_G.MissionAccomplished_GuildAddonMembers, {
-                name = sender, professions = payload.professions
-            })
+            table.insert(_G.MissionAccomplished_GuildAddonMembers, { name = sender, professions = payload.professions })
         end
     end,
     INTER_ADDON = function(sender, payload)
         if payload.professions then
             addonCommandHandlers["ProfessionData"](sender, payload)
         end
-        -- Process other inter-addon messages as needed.
     end,
 }
+
+------------------------------------------------------------------------------
+-- Communication: Send a robust addon message
+------------------------------------------------------------------------------
+function GavrialsCall:SendMessage(cmd, payload, channel)
+    local data = { cmd = cmd, payload = payload }
+    self:SendAddonMessageCompressed(data, channel)
+end
+
+------------------------------------------------------------------------------
+-- Global Callback Registration
+------------------------------------------------------------------------------
+MissionAccomplished._callbacks = MissionAccomplished._callbacks or {}
+function MissionAccomplished.RegisterCallback(event, callback)
+    MissionAccomplished._callbacks[event] = MissionAccomplished._callbacks[event] or {}
+    table.insert(MissionAccomplished._callbacks[event], callback)
+end
+
+local function TriggerCallbacks(event, ...)
+    if MissionAccomplished._callbacks[event] then
+        for _, cb in ipairs(MissionAccomplished._callbacks[event]) do
+            pcall(cb, event, ...)
+        end
+    end
+end
 
 ------------------------------------------------------------------------------
 -- Centralized Event Registration
@@ -930,27 +1009,63 @@ local function RegisterEvents(frame)
         frame:RegisterEvent(eventName)
     end
     frame:SetScript("OnEvent", function(_, ev, ...)
-        GavrialsCall.HandleCharacterEvent(ev, ...)
+        GavrialsCall:HandleCharacterEvent(ev, ...)
         TriggerCallbacks(ev, ...)
     end)
 end
 
 ------------------------------------------------------------------------------
--- Initialization
+-- New: SendLocalProgress – sends a local progress event message to the user.
 ------------------------------------------------------------------------------
-function GavrialsCall.Init()
-    GavrialsCall.CreateFrame()
+function GavrialsCall:SendLocalProgress()
+    local progressPct = MissionAccomplished_GetProgressPercentage and MissionAccomplished_GetProgressPercentage() or 0
+    local rounded = math.floor(progressPct + 0.5)
+    local eventData = EventsDictionary.allEvents.PR
+    if eventData then
+        local formattedMessage = string.format(eventData.message, UnitName("player"), rounded)
+        self:DisplayMessage(UnitName("player"), formattedMessage, eventData.icon, {1, 1, 1})
+    end
+end
+
+----------------------------------------
+-- Initialization
+----------------------------------------
+function GavrialsCall:Init()
+    self:CreateFrame()
     if not C_ChatInfo.IsAddonMessagePrefixRegistered(PREFIX) then
         C_ChatInfo.RegisterAddonMessagePrefix(PREFIX)
     end
-    GavrialsCall.eventFrame = CreateFrame("Frame")
-    RegisterEvents(GavrialsCall.eventFrame)
-    GavrialsCall.ResetHealthNotifications()
+    self.eventFrame = CreateFrame("Frame")
+    RegisterEvents(self.eventFrame)
+    self:ResetHealthNotifications()
     GuildRoster()
+    local function DisplayWelcomeTextOnce()
+        if welcomeShown then return end
+        welcomeShown = true
+        local playerName  = UnitName("player") or "Player"
+        local playerLevel = UnitLevel("player") or 1
+        if playerLevel >= 60 then
+            local eventData = EventsDictionary.allEvents.Welcome60
+            local formattedMessage = string.format(eventData.message, playerName)
+            self:DisplayMessage("", formattedMessage, eventData.icon, {1, 1, 1})
+            self:PlayEventSound(eventData.sound)
+        else
+            local xpSoFar = MissionAccomplished.GetTotalXPSoFar() or 0
+            local xpMax   = MissionAccomplished.GetXPMaxTo60() or 1
+            local remain  = xpMax - xpSoFar
+            if remain < 0 then remain = 0 end
+            local pct = (xpSoFar / xpMax) * 100
+            local eventData = EventsDictionary.allEvents.Welcome
+            local formattedMessage = string.format(eventData.message, playerName, pct, remain)
+            self:DisplayMessage("", formattedMessage, eventData.icon, {1, 1, 1})
+            self:PlayEventSound(eventData.sound)
+        end
+    end
     DisplayWelcomeTextOnce()
-
     if MissionAccomplishedDB and MissionAccomplishedDB.eventFrameEnabled then
-        GavrialsCall.Show(false)
+        self:Show(false)
+    else
+        self:Hide()  -- Ensure it is hidden if disabled.
     end
 end
 
@@ -964,7 +1079,7 @@ initFrame:SetScript("OnEvent", function(_, event, ...)
     if event == "ADDON_LOADED" then
         local addonName = ...
         if addonName == "MissionAccomplished" then
-            GavrialsCall.Init()
+            GavrialsCall:Init()
         end
     elseif event == "CHAT_MSG_ADDON" then
         local prefix, message, distribution, sender = ...

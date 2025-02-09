@@ -56,196 +56,196 @@ function SettingsContent()
     local parentFrame = _G.SettingsFrameContent.contentFrame
 
     -- Create the scrollable area
-local scrollFrame = CreateFrame("ScrollFrame", nil, parentFrame, "UIPanelScrollFrameTemplate")
-scrollFrame:SetAllPoints(parentFrame)
-if scrollFrame.ScrollBar then
-    scrollFrame.ScrollBar:ClearAllPoints()
-    scrollFrame.ScrollBar:SetPoint("TOPRIGHT", parentFrame, "TOPRIGHT", -5, -20)
-    scrollFrame.ScrollBar:SetPoint("BOTTOMRIGHT", parentFrame, "BOTTOMRIGHT", -5, 20)
-end
-
-local content = CreateFrame("Frame", nil, scrollFrame)
-content:SetSize(parentFrame:GetWidth(), parentFrame:GetHeight() + 50)
-scrollFrame:SetScrollChild(content)
-content:SetFrameStrata("DIALOG")
-
-local background = content:CreateTexture(nil, "BACKGROUND")
-background:SetAllPoints(content)
-background:SetColorTexture(0, 0, 0, 0.3)
-
------------------------------------------------------------------------------
--- SETTINGS TITLE (Morpheus font, 32pt, outlined, white)
------------------------------------------------------------------------------
-local settingsTitle = content:CreateFontString(nil, "OVERLAY")
-settingsTitle:SetFont("Fonts\\MORPHEUS.TTF", 32, "OUTLINE")
-settingsTitle:SetPoint("TOP", content, "TOP", 0, -10)
-settingsTitle:SetText("|cffffffffSettings|r")
-settingsTitle:SetJustifyH("CENTER")
-
------------------------------------------------------------------------------
--- TABS FRAME (Positioned below the title, centered)
------------------------------------------------------------------------------
-local tabsFrame = CreateFrame("Frame", nil, content)
-tabsFrame:SetSize(content:GetWidth(), 30)
-tabsFrame:SetPoint("TOP", settingsTitle, "BOTTOM", 0, -20)
-
------------------------------------------------------------------------------
--- TAB BUTTONS ALONG THE TOP
------------------------------------------------------------------------------
-local tabNames = { "Event Box", "XP Bar", "Story & Tips", "Other" }
-local tabButtons = {}
-for i, name in ipairs(tabNames) do
-    local btn = CreateFrame("Button", nil, tabsFrame, "UIPanelButtonTemplate")
-    btn:SetSize(100, 22)
-    btn:SetText(name)
-    if i == 1 then
-        -- Anchor the first button to the center-left of the tabsFrame.
-        btn:SetPoint("LEFT", tabsFrame, "LEFT", 10, 0)
-    else
-        btn:SetPoint("LEFT", tabButtons[i - 1], "RIGHT", 10, 0)
+    local scrollFrame = CreateFrame("ScrollFrame", nil, parentFrame, "UIPanelScrollFrameTemplate")
+    scrollFrame:SetAllPoints(parentFrame)
+    if scrollFrame.ScrollBar then
+        scrollFrame.ScrollBar:ClearAllPoints()
+        scrollFrame.ScrollBar:SetPoint("TOPRIGHT", parentFrame, "TOPRIGHT", -5, -20)
+        scrollFrame.ScrollBar:SetPoint("BOTTOMRIGHT", parentFrame, "BOTTOMRIGHT", -5, 20)
     end
-    tabButtons[i] = btn
-end
 
------------------------------------------------------------------------------
--- EACH TAB GETS A SEPARATE FRAME (Centered below the tabsFrame)
------------------------------------------------------------------------------
-local sectionHeight = content:GetHeight() - (settingsTitle:GetStringHeight() or 32) - tabsFrame:GetHeight() - 10
+    local content = CreateFrame("Frame", nil, scrollFrame)
+    content:SetSize(parentFrame:GetWidth(), parentFrame:GetHeight() + 50)
+    scrollFrame:SetScrollChild(content)
+    content:SetFrameStrata("DIALOG")
 
-local eventBoxFrame = CreateFrame("Frame", nil, content)
-eventBoxFrame:SetSize(content:GetWidth(), sectionHeight)
-eventBoxFrame:SetPoint("TOP", tabsFrame, "BOTTOM", 0, -10)
+    local background = content:CreateTexture(nil, "BACKGROUND")
+    background:SetAllPoints(content)
+    background:SetColorTexture(0, 0, 0, 0.3)
 
-local xpBarFrame = CreateFrame("Frame", nil, content)
-xpBarFrame:SetSize(content:GetWidth(), sectionHeight)
-xpBarFrame:SetPoint("TOP", tabsFrame, "BOTTOM", 0, -10)
+    -----------------------------------------------------------------------------
+    -- SETTINGS TITLE (Morpheus font, 32pt, outlined, white)
+    -----------------------------------------------------------------------------
+    local settingsTitle = content:CreateFontString(nil, "OVERLAY")
+    settingsTitle:SetFont("Fonts\\MORPHEUS.TTF", 32, "OUTLINE")
+    settingsTitle:SetPoint("TOP", content, "TOP", 0, -10)
+    settingsTitle:SetText("|cffffffffSettings|r")
+    settingsTitle:SetJustifyH("CENTER")
 
-local storyFrame = CreateFrame("Frame", nil, content)
-storyFrame:SetSize(content:GetWidth(), sectionHeight)
-storyFrame:SetPoint("TOP", tabsFrame, "BOTTOM", 0, -10)
+    -----------------------------------------------------------------------------
+    -- TABS FRAME (Positioned below the title, centered)
+    -----------------------------------------------------------------------------
+    local tabsFrame = CreateFrame("Frame", nil, content)
+    tabsFrame:SetSize(content:GetWidth(), 30)
+    tabsFrame:SetPoint("TOP", settingsTitle, "BOTTOM", 0, -20)
 
-local otherFrame = CreateFrame("Frame", nil, content)
-otherFrame:SetSize(content:GetWidth(), sectionHeight)
-otherFrame:SetPoint("TOP", tabsFrame, "BOTTOM", 0, -10)
-
-
---------------------------------------------------------------------------
--- 1) EVENT BOX TAB (Using a Sub-Frame for Filters)
---------------------------------------------------------------------------
-local eventHeader = eventBoxFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-eventHeader:SetPoint("TOPLEFT", 20, -20)
-eventHeader:SetJustifyH("LEFT")
-eventHeader:SetText("Event Box Settings")
-
--- Shorter tips, left-justified
-local eventTips = eventBoxFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-eventTips:SetPoint("TOPLEFT", eventHeader, "BOTTOMLEFT", 0, -6)
-eventTips:SetJustifyH("LEFT")
-eventTips:SetWordWrap(true)
-eventTips:SetWidth(eventBoxFrame:GetWidth() - 40)
-eventTips:SetText("Tips:\n• SHIFT+Drag to move.\n• Sounds play on notify.")
-
--- Separator below tips
-local separator1 = eventBoxFrame:CreateTexture(nil, "BACKGROUND")
-separator1:SetColorTexture(1, 1, 1, 0.2)
-separator1:SetPoint("TOPLEFT", eventTips, "BOTTOMLEFT", 0, -8)
-separator1:SetPoint("TOPRIGHT", eventTips, "BOTTOMRIGHT", 0, -8)
-separator1:SetHeight(1)
-
---------------------------------------------------------------------------
--- Enable/Disable the Event Box
---------------------------------------------------------------------------
-local function OnToggleEventBox(self)
-    local enabled = self:GetChecked()
-    MissionAccomplishedDB.eventFrameEnabled = enabled
-    if enabled then
-        if GavrialsCall and GavrialsCall.Show then
-            GavrialsCall.Show(true)
+    -----------------------------------------------------------------------------
+    -- TAB BUTTONS ALONG THE TOP
+    -----------------------------------------------------------------------------
+    local tabNames = { "Event Box", "XP Bar", "Story & Tips", "Other" }
+    local tabButtons = {}
+    for i, name in ipairs(tabNames) do
+        local btn = CreateFrame("Button", nil, tabsFrame, "UIPanelButtonTemplate")
+        btn:SetSize(100, 22)
+        btn:SetText(name)
+        if i == 1 then
+            -- Anchor the first button to the center-left of the tabsFrame.
+            btn:SetPoint("LEFT", tabsFrame, "LEFT", 10, 0)
+        else
+            btn:SetPoint("LEFT", tabButtons[i - 1], "RIGHT", 10, 0)
         end
-        C_ChatInfo.SendAddonMessage(PREFIX, "EnableEventFrame", "PARTY")
-    else
-        if GavrialsCall and GavrialsCall.Hide then
-            GavrialsCall.Hide()
-        end
-        C_ChatInfo.SendAddonMessage(PREFIX, "DisableEventFrame", "PARTY")
+        tabButtons[i] = btn
     end
-end
 
-local eventBoxCheckbox = CreateFrame("CheckButton", nil, eventBoxFrame, "UICheckButtonTemplate")
-eventBoxCheckbox:SetPoint("TOPLEFT", separator1, "BOTTOMLEFT", 0, -12)
-eventBoxCheckbox.text = eventBoxCheckbox:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-eventBoxCheckbox.text:SetPoint("LEFT", eventBoxCheckbox, "RIGHT", 5, 0)
-eventBoxCheckbox.text:SetJustifyH("LEFT")
-eventBoxCheckbox.text:SetText("Enable Event Box")
-eventBoxCheckbox:SetScript("OnClick", OnToggleEventBox)
-eventBoxCheckbox:SetChecked(MissionAccomplishedDB.eventFrameEnabled or false)
-if MissionAccomplishedDB.eventFrameEnabled and GavrialsCall and GavrialsCall.Show then
-    GavrialsCall.Show(true)
-end
+    -----------------------------------------------------------------------------
+    -- EACH TAB GETS A SEPARATE FRAME (Centered below the tabsFrame)
+    -----------------------------------------------------------------------------
+    local sectionHeight = content:GetHeight() - (settingsTitle:GetStringHeight() or 32) - tabsFrame:GetHeight() - 10
 
---------------------------------------------------------------------------
--- Enable/Disable Event Sounds
---------------------------------------------------------------------------
-local function OnToggleEventSounds(self)
-    MissionAccomplishedDB.eventSoundsEnabled = self:GetChecked()
-end
+    local eventBoxFrame = CreateFrame("Frame", nil, content)
+    eventBoxFrame:SetSize(content:GetWidth(), sectionHeight)
+    eventBoxFrame:SetPoint("TOP", tabsFrame, "BOTTOM", 0, -10)
 
-local eventSoundsCheckbox = CreateFrame("CheckButton", nil, eventBoxFrame, "UICheckButtonTemplate")
-eventSoundsCheckbox:SetPoint("TOPLEFT", eventBoxCheckbox, "BOTTOMLEFT", 0, -10)
-eventSoundsCheckbox.text = eventSoundsCheckbox:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-eventSoundsCheckbox.text:SetPoint("LEFT", eventSoundsCheckbox, "RIGHT", 5, 0)
-eventSoundsCheckbox.text:SetJustifyH("LEFT")
-eventSoundsCheckbox.text:SetText("Enable Event Sounds")
-eventSoundsCheckbox:SetScript("OnClick", OnToggleEventSounds)
-eventSoundsCheckbox:SetChecked(MissionAccomplishedDB.eventSoundsEnabled ~= false)
+    local xpBarFrame = CreateFrame("Frame", nil, content)
+    xpBarFrame:SetSize(content:GetWidth(), sectionHeight)
+    xpBarFrame:SetPoint("TOP", tabsFrame, "BOTTOM", 0, -10)
 
---------------------------------------------------------------------------
--- Create a Sub-Frame for Event Filters
---------------------------------------------------------------------------
-local filtersSubFrame = CreateFrame("Frame", nil, eventBoxFrame, "BackdropTemplate")
-filtersSubFrame:SetSize(eventBoxFrame:GetWidth() - 40, 140) 
-filtersSubFrame:SetPoint("TOPLEFT", eventSoundsCheckbox, "BOTTOMLEFT", 0, -16)
--- Optional: give it a transparent backdrop to see its bounds (remove in production):
--- filtersSubFrame:SetBackdrop({
---     bgFile = "Interface\\Buttons\\WHITE8x8",
---     edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
---     tile = false, edgeSize = 16,
--- })
--- filtersSubFrame:SetBackdropColor(0, 0, 0, 0.1)
+    local storyFrame = CreateFrame("Frame", nil, content)
+    storyFrame:SetSize(content:GetWidth(), sectionHeight)
+    storyFrame:SetPoint("TOP", tabsFrame, "BOTTOM", 0, -10)
 
-local filtersHeader = filtersSubFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-filtersHeader:SetPoint("TOPLEFT", 0, -2)
-filtersHeader:SetJustifyH("LEFT")
-filtersHeader:SetText("Event Filters:")
+    local otherFrame = CreateFrame("Frame", nil, content)
+    otherFrame:SetSize(content:GetWidth(), sectionHeight)
+    otherFrame:SetPoint("TOP", tabsFrame, "BOTTOM", 0, -10)
 
--- We'll define each event filter within this sub-frame
-local filterNames = {
-    { label = "Entered Instance", key = "EnteredInstance" },
-    { label = "Low Health",       key = "LowHealth" },
-    { label = "Level Up",         key = "LevelUp" },
-    { label = "Guild Death",      key = "GuildDeath" },
-    { label = "Max Level",        key = "MaxLevel" },
-    { label = "Progress",         key = "Progress" },
-}
 
-local yOffset = -20
-for i, filter in ipairs(filterNames) do
-    local checkbox = CreateFrame("CheckButton", nil, filtersSubFrame, "UICheckButtonTemplate")
-    checkbox:SetPoint("TOPLEFT", filtersHeader, "BOTTOMLEFT", 0, yOffset)
-    checkbox.text = checkbox:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    checkbox.text:SetPoint("LEFT", checkbox, "RIGHT", 5, 0)
-    checkbox.text:SetJustifyH("LEFT")
-    checkbox.text:SetText(filter.label)
-    checkbox:SetChecked(MissionAccomplishedDB.eventFilters and MissionAccomplishedDB.eventFilters[filter.key])
-    checkbox:SetScript("OnClick", function(self)
-        if not MissionAccomplishedDB.eventFilters then
-            MissionAccomplishedDB.eventFilters = {}
+    --------------------------------------------------------------------------
+    -- 1) EVENT BOX TAB (Using a Sub-Frame for Filters)
+    --------------------------------------------------------------------------
+    local eventHeader = eventBoxFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    eventHeader:SetPoint("TOPLEFT", 20, -20)
+    eventHeader:SetJustifyH("LEFT")
+    eventHeader:SetText("Event Box Settings")
+
+    -- Shorter tips, left-justified
+    local eventTips = eventBoxFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    eventTips:SetPoint("TOPLEFT", eventHeader, "BOTTOMLEFT", 0, -6)
+    eventTips:SetJustifyH("LEFT")
+    eventTips:SetWordWrap(true)
+    eventTips:SetWidth(eventBoxFrame:GetWidth() - 40)
+    eventTips:SetText("Tips:\n• SHIFT+Drag to move.\n• Sounds play on notify.")
+
+    -- Separator below tips
+    local separator1 = eventBoxFrame:CreateTexture(nil, "BACKGROUND")
+    separator1:SetColorTexture(1, 1, 1, 0.2)
+    separator1:SetPoint("TOPLEFT", eventTips, "BOTTOMLEFT", 0, -8)
+    separator1:SetPoint("TOPRIGHT", eventTips, "BOTTOMRIGHT", 0, -8)
+    separator1:SetHeight(1)
+
+    --------------------------------------------------------------------------
+    -- Enable/Disable the Event Box
+    --------------------------------------------------------------------------
+    local function OnToggleEventBox(self)
+        local enabled = self:GetChecked()
+        MissionAccomplishedDB.eventFrameEnabled = enabled
+        if enabled then
+            if GavrialsCall and GavrialsCall.Show then
+                GavrialsCall:Show(true)
+            end
+            C_ChatInfo.SendAddonMessage(PREFIX, "EnableEventFrame", "PARTY")
+        else
+            if GavrialsCall and GavrialsCall.Hide then
+                GavrialsCall:Hide()
+            end
+            C_ChatInfo.SendAddonMessage(PREFIX, "DisableEventFrame", "PARTY")
         end
-        MissionAccomplishedDB.eventFilters[filter.key] = self:GetChecked()
-    end)
+    end
 
-    yOffset = yOffset - 20  -- move each subsequent checkbox down
-end
+    local eventBoxCheckbox = CreateFrame("CheckButton", nil, eventBoxFrame, "UICheckButtonTemplate")
+    eventBoxCheckbox:SetPoint("TOPLEFT", separator1, "BOTTOMLEFT", 0, -12)
+    eventBoxCheckbox.text = eventBoxCheckbox:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    eventBoxCheckbox.text:SetPoint("LEFT", eventBoxCheckbox, "RIGHT", 5, 0)
+    eventBoxCheckbox.text:SetJustifyH("LEFT")
+    eventBoxCheckbox.text:SetText("Enable Event Box")
+    eventBoxCheckbox:SetScript("OnClick", OnToggleEventBox)
+    eventBoxCheckbox:SetChecked(MissionAccomplishedDB.eventFrameEnabled or false)
+    if MissionAccomplishedDB.eventFrameEnabled and GavrialsCall and GavrialsCall.Show then
+        GavrialsCall:Show(true)
+    end
+
+    --------------------------------------------------------------------------
+    -- Enable/Disable Event Sounds
+    --------------------------------------------------------------------------
+    local function OnToggleEventSounds(self)
+        MissionAccomplishedDB.eventSoundsEnabled = self:GetChecked()
+    end
+
+    local eventSoundsCheckbox = CreateFrame("CheckButton", nil, eventBoxFrame, "UICheckButtonTemplate")
+    eventSoundsCheckbox:SetPoint("TOPLEFT", eventBoxCheckbox, "BOTTOMLEFT", 0, -10)
+    eventSoundsCheckbox.text = eventSoundsCheckbox:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    eventSoundsCheckbox.text:SetPoint("LEFT", eventSoundsCheckbox, "RIGHT", 5, 0)
+    eventSoundsCheckbox.text:SetJustifyH("LEFT")
+    eventSoundsCheckbox.text:SetText("Enable Event Sounds")
+    eventSoundsCheckbox:SetScript("OnClick", OnToggleEventSounds)
+    eventSoundsCheckbox:SetChecked(MissionAccomplishedDB.eventSoundsEnabled ~= false)
+
+    --------------------------------------------------------------------------
+    -- Create a Sub-Frame for Event Filters
+    --------------------------------------------------------------------------
+    local filtersSubFrame = CreateFrame("Frame", nil, eventBoxFrame, "BackdropTemplate")
+    filtersSubFrame:SetSize(eventBoxFrame:GetWidth() - 40, 140)
+    filtersSubFrame:SetPoint("TOPLEFT", eventSoundsCheckbox, "BOTTOMLEFT", 0, -16)
+    -- Optional: give it a transparent backdrop to see its bounds (remove in production):
+    -- filtersSubFrame:SetBackdrop({
+    --     bgFile = "Interface\\Buttons\\WHITE8x8",
+    --     edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    --     tile = false, edgeSize = 16,
+    -- })
+    -- filtersSubFrame:SetBackdropColor(0, 0, 0, 0.1)
+
+    local filtersHeader = filtersSubFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    filtersHeader:SetPoint("TOPLEFT", 0, -2)
+    filtersHeader:SetJustifyH("LEFT")
+    filtersHeader:SetText("Event Filters:")
+
+    -- We'll define each event filter within this sub-frame
+    local filterNames = {
+        { label = "Entered Instance", key = "EnteredInstance" },
+        { label = "Low Health",       key = "LowHealth" },
+        { label = "Level Up",         key = "LevelUp" },
+        { label = "Guild Death",      key = "GuildDeath" },
+        { label = "Max Level",        key = "MaxLevel" },
+        { label = "Progress",         key = "Progress" },
+    }
+
+    local yOffset = -20
+    for i, filter in ipairs(filterNames) do
+        local checkbox = CreateFrame("CheckButton", nil, filtersSubFrame, "UICheckButtonTemplate")
+        checkbox:SetPoint("TOPLEFT", filtersHeader, "BOTTOMLEFT", 0, yOffset)
+        checkbox.text = checkbox:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        checkbox.text:SetPoint("LEFT", checkbox, "RIGHT", 5, 0)
+        checkbox.text:SetJustifyH("LEFT")
+        checkbox.text:SetText(filter.label)
+        checkbox:SetChecked(MissionAccomplishedDB.eventFilters and MissionAccomplishedDB.eventFilters[filter.key])
+        checkbox:SetScript("OnClick", function(self)
+            if not MissionAccomplishedDB.eventFilters then
+                MissionAccomplishedDB.eventFilters = {}
+            end
+            MissionAccomplishedDB.eventFilters[filter.key] = self:GetChecked()
+        end)
+
+        yOffset = yOffset - 20  -- move each subsequent checkbox down
+    end
 
     --------------------------------------------------------------------------
     -- 2) XP BAR TAB
@@ -415,14 +415,14 @@ end
     -- If the user opens the settings window, we show the event box (if it’s enabled).
     content:SetScript("OnShow", function()
         if MissionAccomplishedDB.eventFrameEnabled and GavrialsCall and GavrialsCall.Show then
-            GavrialsCall.Show(true)
+            GavrialsCall:Show(true)
         end
     end)
 
     content:SetScript("OnHide", function()
         if GavrialsCall then
             GavrialsCall.isPersistent = false
-            GavrialsCall.Hide()
+            GavrialsCall:Hide()
         end
     end)
 

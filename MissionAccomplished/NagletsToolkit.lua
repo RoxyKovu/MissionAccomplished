@@ -6,15 +6,37 @@
 --   2) MissionAccomplished Tools (Reset Combat Data, Test Event Functions, Send Progress)
 --   3) System Tools (Reload UI, Clear Cache, Show FPS, Take Screenshot)
 --
--- When "Reset Combat Data" is pressed, it zeroes out all relevant stats and
--- prints "Combat data cleared!" without forcing a tab switch.
--- When "Test Event Functions" is pressed, it shows local (user-only) test
--- notifications using a local event handler so that no addon messages are broadcast.
--- The "Send Progress" button calculates your progress toward level 60 and:
---   - Displays it in your event box.
---   - Broadcasts it to your guild if you are in one.
--- If you are not in a guild, a friendly message is displayed locally.
+-- The "Send Progress" button computes your EXP progress toward level 60 and
+-- builds a compressed string in the format:
+--
+--    MAGuildEvent:PR,<sender>,<roundedPct>
+--
+-- This string is sent to your custom guild channel (for example, "/MAguildname")
+-- via SendChatMessage. Your guild chat handler (in GuildNotification.lua) will
+-- then read and process this string (using the event data from your EventsDictionary).
 --=============================================================================
+
+-- Fallback definition for EnsureGuildChannel() if not defined globally.
+if not EnsureGuildChannel then
+    function EnsureGuildChannel()
+        local guildName = GetGuildInfo("player")
+        if not guildName then
+            return 0, nil  -- Not in a guild.
+        end
+        local guildChannelName = "MA" .. guildName
+        local channelNum = GetChannelName(guildChannelName)
+        if channelNum == 0 then
+            JoinChannelByName(guildChannelName)
+            channelNum = GetChannelName(guildChannelName)
+            for i = 1, 10 do
+                if _G["ChatFrame" .. i] then
+                    ChatFrame_RemoveChannel(_G["ChatFrame" .. i], guildChannelName)
+                end
+            end
+        end
+        return channelNum, guildChannelName
+    end
+end
 
 local function NagletsToolkitContent()
     -- Basic check for the parent content frame.
@@ -70,7 +92,6 @@ local function NagletsToolkitContent()
         local x, y = startX, startY
         local columnSpacing = 160
         local rowSpacing = -50
-
         for i, data in ipairs(buttonData) do
             local text, script = unpack(data)
             CreateButton(parent, text, { "TOPLEFT", header, "BOTTOMLEFT", x, y }, script)
@@ -84,46 +105,60 @@ local function NagletsToolkitContent()
     end
 
     ----------------------------------------------------------------
-    -- 1) In-Game Tools
+    -- Timer function that starts a 10-second countdown.
     ----------------------------------------------------------------
-
-    -- Timer function that sends event box messages.
     local function StartTenSecondTimer()
-        for i = 1, 10 do
-            C_Timer.After(i, function()
-                local remain = 10 - i
-                if remain > 0 then
-                    MissionAccomplished.GavrialsCall.DisplayMessage("Timer", remain .. " seconds remaining.", "Interface\\Icons\\spell_holy_borrowedtime", {1, 1, 1})
-                else
-                    MissionAccomplished.GavrialsCall.DisplayMessage("Timer", "Timer completed.", "Interface\\Icons\\spell_holy_borrowedtime", {1, 1, 1})
-                end
-            end)
+        if SlashCmdList and SlashCmdList["COUNTDOWN"] then
+            SlashCmdList["COUNTDOWN"]("10")
+        elseif Countdown_Start then
+            Countdown_Start(10)
+        else
+            for i = 1, 10 do
+                C_Timer.After(i, function()
+                    local remain = 10 - i
+                    if remain > 0 then
+                        MissionAccomplished.GavrialsCall:DisplayMessage("Timer", remain .. " seconds remaining.", "Interface\\Icons\\spell_holy_borrowedtime", {1, 1, 1})
+                    else
+                        MissionAccomplished.GavrialsCall:DisplayMessage("Timer", "Timer completed.", "Interface\\Icons\\spell_holy_borrowedtime", {1, 1, 1})
+                    end
+                end)
+            end
         end
     end
 
+    ----------------------------------------------------------------
+    -- 1) In-Game Tools
+    ----------------------------------------------------------------
     local inGameButtons = {
         { "Ready Check", function()
-            DoReadyCheck()
-            local msg = "I've initiated a ready check for you!"
-            MissionAccomplished.GavrialsCall.DisplayMessage("Ready Check", msg, "Interface\\Icons\\spell_holy_resurrection", {1, 1, 1})
+            if SlashCmdList and SlashCmdList["READYCHECK"] then
+                SlashCmdList["READYCHECK"]("")
+            else
+                DoReadyCheck()
+            end
+            local msg = "Ready check started."
+            MissionAccomplished.GavrialsCall:DisplayMessage("Ready Check", msg, "Interface\\Icons\\spell_holy_resurrection", {1, 1, 1})
         end },
         { "Roll", function()
-            -- Use the built-in in-game roll command.
             RandomRoll(1, 100)
             local msg = "Rolling a dice... Check the chat for the result!"
-            MissionAccomplished.GavrialsCall.DisplayMessage("Roll", msg, "Interface\\Icons\\inv_misc_dice_02", {1, 1, 1})
+            MissionAccomplished.GavrialsCall:DisplayMessage("Roll", msg, "Interface\\Icons\\inv_misc_dice_02", {1, 1, 1})
         end },
         { "10s Timer", function()
-            StartTenSecondTimer()
-            local msg = "I've started a 10-second countdown for you!"
-            MissionAccomplished.GavrialsCall.DisplayMessage("Timer", msg, "Interface\\Icons\\inv_misc_ticket_tarot_blessings", {1, 1, 1})
+            if SlashCmdList and SlashCmdList["COUNTDOWN"] then
+                SlashCmdList["COUNTDOWN"]("10")
+            else
+                StartTenSecondTimer()
+            end
+            local msg = "Timer started."
+            MissionAccomplished.GavrialsCall:DisplayMessage("Timer", msg, "Interface\\Icons\\inv_misc_ticket_tarot_blessings", {1, 1, 1})
         end },
         { "Clear Marks", function()
             for i = 1, 40 do
                 SetRaidTarget("raid" .. i, 0)
             end
             local msg = "I've cleared all raid markers for you."
-            MissionAccomplished.GavrialsCall.DisplayMessage("Raid Markers", msg, "Interface\\Icons\\achievement_dungeon_heroic_gloryoftheraider", {1, 1, 1})
+            MissionAccomplished.GavrialsCall:DisplayMessage("Raid Markers", msg, "Interface\\Icons\\achievement_dungeon_heroic_gloryoftheraider", {1, 1, 1})
         end },
     }
 
@@ -132,12 +167,9 @@ local function NagletsToolkitContent()
     ----------------------------------------------------------------
     local missionButtons = {
         { "Reset Combat Data", function()
-            -- Ensure the database exists.
             if not MissionAccomplishedDB then
                 MissionAccomplishedDB = {}
             end
-
-            -- Clear all combat-related data.
             MissionAccomplishedDB.lowestHP        = nil
             MissionAccomplishedDB.highestDamage   = 0
             MissionAccomplishedDB.totalDamage     = 0
@@ -146,24 +178,18 @@ local function NagletsToolkitContent()
             MissionAccomplishedDB.avgDPS          = 0
             MissionAccomplishedDB.avgDPM          = 0
             MissionAccomplishedDB.enemiesPerHour  = 0
-
             local msg = "All combat data has been cleared."
-            MissionAccomplished.GavrialsCall.DisplayMessage("Combat Data", msg, "Interface\\Icons\\spell_misc_hellifrepvpcombatmorale", {1, 1, 1})
+            MissionAccomplished.GavrialsCall:DisplayMessage("Combat Data", msg, "Interface\\Icons\\spell_misc_hellifrepvpcombatmorale", {1, 1, 1})
         end },
         { "Test Event Functions", function()
             if not (MissionAccomplished and MissionAccomplished.GavrialsCall) then
-                MissionAccomplished.GavrialsCall.DisplayMessage("Error", "MissionAccomplished.GavrialsCall not found.", "Interface\\Icons\\INV_Misc_QuestionMark", {1, 1, 1})
+                MissionAccomplished.GavrialsCall:DisplayMessage("Error", "MissionAccomplished.GavrialsCall not found.", "Interface\\Icons\\INV_Misc_QuestionMark", {1, 1, 1})
                 return
             end
-
-            -- Ensure the event box is visible for testing.
-            MissionAccomplished.GavrialsCall.Show(true)
-
-            -- Local helper that mimics HandleEventMessage without broadcasting.
+            MissionAccomplished.GavrialsCall:Show(true)
             local function HandleEventMessageLocal(message, sender)
                 local eventName, messageText = strsplit(":", message, 2)
                 if not eventName or not messageText then return end
-
                 local iconPath, color = nil, {1, 1, 1}
                 if eventName == "LowHealth" then
                     iconPath = "Interface\\Icons\\Ability_Creature_Cursed_05"
@@ -178,8 +204,8 @@ local function NagletsToolkitContent()
                     iconPath = "Interface\\Icons\\Spell_Shadow_SoulLeech_3"
                     color = {0.5, 0, 0}
                 end
-                MissionAccomplished.GavrialsCall.DisplayMessage(sender, messageText, iconPath, color)
-                MissionAccomplished.GavrialsCall.PlayEventSound(eventName)
+                MissionAccomplished.GavrialsCall:DisplayMessage(sender, messageText, iconPath, color)
+                MissionAccomplished.GavrialsCall:PlayEventSound(eventName)
             end
 
             local testEvents = {
@@ -195,26 +221,23 @@ local function NagletsToolkitContent()
             end
         end },
         { "Send Progress", function()
-            local playerName = UnitName("player") or "Player"
+            local sender = UnitName("player") or "Player"
             local xpSoFar = MissionAccomplished.GetTotalXPSoFar() or 0
             local xpMax = MissionAccomplished.GetXPMaxTo60() or 1
-            local xpLeft = xpMax - xpSoFar
             local xpPct = (xpSoFar / xpMax) * 100
-            local msg = string.format("Hey, you are %.1f%% done with %d EXP left until level 60!", xpPct, xpLeft)
-            -- Display the progress locally.
-            MissionAccomplished.GavrialsCall.DisplayMessage(playerName, msg, "Interface\\Icons\\INV_Misc_Map_01", {1, 0.8, 0})
-            -- Check if you're in a guild.
+            local roundedPct = math.floor(xpPct + 0.5)
+            -- Build the compressed progress string (using the PR event format)
+            local compressedMessage = string.format("MAGuildEvent:PR,%s,%d", sender, roundedPct)
             if not IsInGuild() then
-                local noGuildMsg = "You're not in a guild right now, so I can't broadcast your progress."
-                MissionAccomplished.GavrialsCall.DisplayMessage(playerName, noGuildMsg, "Interface\\Icons\\INV_Misc_Token_OrcTroll", {1, 0.2, 0.2})
+                MissionAccomplished.GavrialsCall:DisplayMessage(sender, "Not in a guild; progress: " .. compressedMessage, "Interface\\Icons\\INV_Misc_Token_OrcTroll", {1, 0.2, 0.2})
                 return
             end
-            -- Broadcast your progress to your guild.
-            MissionAccomplished.GavrialsCall.SendAddonMessage({
-                prefix  = MissionAccomplished.GavrialsCall.PREFIX or "MissionAcc",
-                message = "Progress:" .. msg,
-                channel = "GUILD",
-            })
+            local channelNum, channelName = EnsureGuildChannel()
+            if channelNum and channelNum > 0 then
+                SendChatMessage(compressedMessage, "CHANNEL", nil, channelNum)
+            else
+                MissionAccomplished.GavrialsCall:DisplayMessage(sender, compressedMessage, "Interface\\Icons\\INV_Misc_Map_01", {1, 1, 1})
+            end
         end },
     }
 
@@ -224,23 +247,23 @@ local function NagletsToolkitContent()
     local systemButtons = {
         { "Reload UI", function()
             local msg = "Reloading the UI now!"
-            MissionAccomplished.GavrialsCall.DisplayMessage("System", msg, "Interface\\Icons\\INV_Misc_QuestionMark", {1, 1, 1})
+            MissionAccomplished.GavrialsCall:DisplayMessage("System", msg, "Interface\\Icons\\INV_Misc_QuestionMark", {1, 1, 1})
             ReloadUI()
         end },
         { "Clear Cache", function()
             local msg = "Clearing cache and reloading UI!"
-            MissionAccomplished.GavrialsCall.DisplayMessage("System", msg, "Interface\\Icons\\INV_Misc_QuestionMark", {1, 1, 1})
+            MissionAccomplished.GavrialsCall:DisplayMessage("System", msg, "Interface\\Icons\\INV_Misc_QuestionMark", {1, 1, 1})
             C_Timer.After(0.5, function() ReloadUI() end)
         end },
         { "Show FPS", function()
             local fps = GetFramerate()
             local msg = "Your current FPS is " .. math.floor(fps) .. "."
-            MissionAccomplished.GavrialsCall.DisplayMessage("Current FPS", tostring(math.floor(fps)), "Interface\\Icons\\Spell_Holy_GreaterBlessingofKings", {1, 1, 1})
+            MissionAccomplished.GavrialsCall:DisplayMessage("Current FPS", tostring(math.floor(fps)), "Interface\\Icons\\Spell_Holy_GreaterBlessingofKings", {1, 1, 1})
         end },
         { "Take Screenshot", function()
             Screenshot()
             local msg = "I've taken a screenshot for you."
-            MissionAccomplished.GavrialsCall.DisplayMessage("Screenshot", msg, "Interface\\Icons\\INV_Misc_QuestionMark", {1, 1, 1})
+            MissionAccomplished.GavrialsCall:DisplayMessage("Screenshot", msg, "Interface\\Icons\\INV_Misc_QuestionMark", {1, 1, 1})
         end },
     }
 
@@ -257,3 +280,28 @@ local function NagletsToolkitContent()
 end
 
 _G.NagletsToolkitContent = NagletsToolkitContent
+
+-------------------------------------------------------------------------------
+-- First-Time Prompt Hook
+-------------------------------------------------------------------------------
+local firstTimeFrame = CreateFrame("Frame")
+firstTimeFrame:RegisterEvent("PLAYER_LOGIN")
+firstTimeFrame:SetScript("OnEvent", function()
+    C_Timer.After(1, function()
+        if MissionAccomplishedDB.showFirstTimePrompt == nil then
+            MissionAccomplishedDB.showFirstTimePrompt = true
+        end
+        if not MissionAccomplishedDB.firstTimeSetup and MissionAccomplishedDB.showFirstTimePrompt then
+            if MissionAccomplished.ShowFirstTimeUsePrompt then
+                MissionAccomplished.ShowFirstTimeUsePrompt()
+            else
+                -- print("MissionAccomplished.ShowFirstTimeUsePrompt function not found!")
+            end
+        end
+    end)
+end)
+
+MissionAccomplished = MissionAccomplished or {}
+MissionAccomplished.ShowFirstTimeUsePrompt = MissionAccomplished.ShowFirstTimeUsePrompt or function()
+    print("ShowFirstTimeUsePrompt not defined!")
+end

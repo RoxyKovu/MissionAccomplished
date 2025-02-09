@@ -1,4 +1,6 @@
 --=============================================================================
+-- EventsDictionary.lua
+--
 -- Event codes mapped to human-readable event names
 -- This file holds all the events, their corresponding event codes, and
 -- additional data for each event. All event-related properties (icons,
@@ -16,43 +18,98 @@
 
 -- A lookup to map event codes to a human-readable type (mostly for reference)
 local eventTypeLookup = {
-    EI = "EnteredInstance",    -- Entered Instance
-    LH = "LowHealth",          -- Low Health
-    LU = "LevelUp",            -- Level Up
-    GD = "GuildDeath",         -- Guild Death
-    ML = "MaxLevel",           -- Max Level
-    PR = "Progress",           -- Progress
-    GA = "GuildAmount",        -- Guild Amount
-    GT = "GavrialsTip",        -- Gavrial's Tip
+    EI    = "EnteredInstance",    -- Entered Instance
+    LI    = "LeftInstance",       -- Left Instance (new)
+    LH    = "LowHealth",          -- Low Health
+    LU    = "LevelUp",            -- Level Up
+    GD    = "GuildDeath",         -- Guild Death
+    GLU   = "GuildLevelUp",       -- Guild Level Up (new)
+    GAch  = "GuildAchievement",   -- Guild Achievement (new)
+    GLH   = "GuildLowHealth",     -- Guild Low Health (new)
+    GEI   = "GuildEnteredInstance", -- Guild Entered Instance (new)
+    ML    = "MaxLevel",           -- Max Level
+    PR    = "Progress",           -- Progress
+    GA    = "GuildAmount",        -- Guild Amount
+    GT    = "GavrialsTip",        -- Gavrial's Tip (fallback)
+    BE    = "BuffEvent",          -- Buff (Aura) Event
+    GR    = "GuildRosterUpdate",  -- Guild Roster Update
+    BH    = "BigHit",             -- Big Hit (Combat Log) Event
 }
 
 -- Icon definitions for events
 local eventIcons = {
-    EI = "Interface\\Icons\\ability_hunter_rapidkilling",                      -- Entered Instance
-    LH = "Interface\\Icons\\Spell_Holy_AshesToAshes",                          -- Low Health
-    LU = "Interface\\Icons\\achievement_bg_killflagcarriers_grabflag_capit",   -- Level Up
-    GD = "Interface\\Icons\\achievement_ladydeathwhisper",                     -- Guild Death
-    ML = "Interface\\Icons\\achievement_level_60",                             -- Max Level
-    PR = "Interface\\Icons\\ability_hunter_huntervswild",                      -- Progress
-    GA = "Interface\\Icons\\INV_Misc_Coin_01",                                 -- Guild Amount
-    GT = "Interface\\Icons\\INV_Misc_QuestionMark",                            -- Gavrial's Tip (fallback)
+    EI    = "Interface\\Icons\\ability_hunter_rapidkilling",   -- Entered Instance
+    LI    = "Interface\\Icons\\INV_Misc_Map01",                -- Left Instance
+    LH    = "Interface\\Icons\\Spell_Holy_AshesToAshes",         -- Low Health
+    LU    = "Interface\\Icons\\achievement_bg_killflagcarriers_grabflag_capit",  -- Level Up
+    GD    = "Interface\\Icons\\achievement_ladydeathwhisper",    -- Guild Death
+    GLU   = "Interface\\Icons\\INV_Scroll_01",                 -- Guild Level Up
+    GAch  = "Interface\\Icons\\INV_Misc_Coin_03",              -- Guild Achievement
+    GLH   = "Interface\\Icons\\INV_Healthstone",               -- Guild Low Health
+    GEI   = "Interface\\Icons\\INV_Misc_Map02",                -- Guild Entered Instance
+    ML    = "Interface\\Icons\\achievement_level_60",          -- Max Level
+    PR    = "Interface\\Icons\\ability_hunter_huntervswild",   -- Progress
+    GA    = "Interface\\Icons\\INV_Misc_Coin_01",              -- Guild Amount
+    GT    = "Interface\\Icons\\INV_Misc_QuestionMark",         -- Gavrial's Tip (fallback)
+    BE    = "Interface\\Icons\\Spell_Holy_GuardianSpirit",     -- Buff Event (example icon)
+    GR    = "Interface\\Icons\\INV_Misc_GroupLooking",         -- Guild Roster Update
+    BH    = "Interface\\Icons\\INV_Sword_04",                  -- Big Hit
 }
 
 -- Sound file definitions for events
 local eventSounds = {
-    EI = "Sound\\Interface\\RaidWarning.wav",     -- Entered Instance
-    LH = "Sound\\Spells\\PVPFlagTaken.wav",         -- Low Health
-    LU = "Sound\\Interface\\LevelUp.wav",           -- Level Up
-    GD = "Sound\\Spells\\PVPFlagTaken.wav",         -- Guild Death
-    ML = "Sound\\Interface\\Achievement.wav",       -- Max Level
-    PR = "Sound\\Interface\\RaidWarning.wav",       -- Progress
-    GA = "Sound\\Interface\\Achievement.wav",       -- Guild Amount
-    GT = "Sound\\Interface\\LevelUp.wav",           -- Gavrial's Tip (fallback)
+    EI    = "Sound\\Interface\\RaidWarning.wav",      -- Entered Instance
+    LI    = "Sound\\Interface\\RaidWarning.wav",      -- Left Instance (new)
+    LH    = "Sound\\Spells\\PVPFlagTaken.wav",          -- Low Health
+    LU    = "Sound\\Interface\\LevelUp.wav",            -- Level Up
+    GD    = "Sound\\Spells\\PVPFlagTaken.wav",          -- Guild Death
+    GLU   = "Sound\\Interface\\LevelUp.wav",            -- Guild Level Up (new)
+    GAch  = "Sound\\Interface\\Achievement.wav",        -- Guild Achievement
+    GLH   = "Sound\\Spells\\PVPFlagTaken.wav",          -- Guild Low Health (new)
+    GEI   = "Sound\\Interface\\RaidWarning.wav",        -- Guild Entered Instance (new)
+    ML    = "Sound\\Interface\\Achievement.wav",        -- Max Level
+    PR    = "Sound\\Interface\\RaidWarning.wav",        -- Progress
+    GA    = "Sound\\Interface\\Achievement.wav",        -- Guild Amount
+    GT    = "Sound\\Interface\\LevelUp.wav",            -- Gavrial's Tip (fallback)
+    BE    = "Sound\\Interface\\SpellActivationOvertime.wav",  -- Buff event
+    GR    = "Sound\\Interface\\RaidWarning.wav",        -- Guild Roster Update
+    BH    = "Sound\\Interface\\RaidWarning.wav",        -- Big Hit
 }
 
---===========================================================================
--- Dungeon and Raids Events
---===========================================================================
+-- Define additional event tables if not already defined
+
+local auraEvent = {
+    BE = {
+        name = "Buff Event",
+        icon = eventIcons.BE,
+        sound = eventSounds.BE,
+        messageGain = "%s has gained the buff: %s!",
+        messageLost = "%s has lost the buff: %s!",
+    },
+}
+
+local guildRosterEvent = {
+    GR = {
+        name = "Guild Roster Update",
+        icon = eventIcons.GR,
+        sound = eventSounds.GR,
+        message = "%s the %s has come online and is ready to embark on new adventures!",
+    },
+}
+
+
+local bigHitEvent = {
+    BH = {
+        name = "Big Hit",
+        icon = eventIcons.BH,
+        sound = eventSounds.BH,
+        message = "%s was hit hard by %s for %s damage!",
+    },
+}
+
+--=========================================================================== 
+-- Dungeon and Raid Events 
+--=========================================================================== 
 local dungeonEvents = {
     RC = {
         name    = "Ragefire Chasm",
@@ -251,10 +308,9 @@ local raidEvents = {
     },
 }
 
---===========================================================================
--- Guild and Progress Events
---===========================================================================
-
+--=========================================================================== 
+-- Guild and Progress Events 
+--=========================================================================== 
 local guildEvents = {
     GA = {
         name    = "Guild Members Online",
@@ -262,7 +318,7 @@ local guildEvents = {
         sound   = eventSounds.GA,
         message = "%s guild members are currently online.",
     },
-    -- Additional guild-related events can be added here.
+    -- (Additional guild-related events can be added here if needed.)
 }
 
 local progressEvents = {
@@ -274,10 +330,9 @@ local progressEvents = {
     },
 }
 
---===========================================================================
--- Level and Health Events
---===========================================================================
-
+--=========================================================================== 
+-- Level and Health Events 
+--=========================================================================== 
 local maxLevelEvent = {
     ML = {
         name    = "Max Level",
@@ -290,9 +345,9 @@ local maxLevelEvent = {
 local levelEvents = {
     EP = {
         name    = "Epic Level 60",
-        icon    = "Interface\\Icons\\achievement_level_60",   
-        sound   = "Sound\\Interface\\Achievement.wav",         
-        message = "Behold, %s the %s from %s has ascended to level 60! Let his saga echo through eternity!", 
+        icon    = "Interface\\Icons\\achievement_level_60",
+        sound   = "Sound\\Interface\\Achievement.wav",
+        message = "Behold, %s the %s from %s has ascended to level 60! Let their saga echo through eternity!",
     },
 }
 
@@ -310,7 +365,7 @@ local levelUpEvent = {
         name    = "Level Up",
         icon    = "Interface\\Icons\\achievement_bg_killflagcarriers_grabflag_capit",
         sound   = eventSounds.LU,
-        message = "%s has ascended to level %s—power surges in their veins!",
+        message = "%s the %s has ascended to level %s—power surges in their veins!",
     },
 }
 
@@ -323,14 +378,13 @@ local guildDeathEvent = {
     },
 }
 
---===========================================================================
--- Additional Events to Free Up GavrialsCall
---===========================================================================
-
+--=========================================================================== 
+-- Additional Events 
+--=========================================================================== 
 local welcomeEvent = {
     Welcome = {
         name    = "Welcome",
-        icon    = "Interface\\Icons\\ability_hunter_huntervswild", 
+        icon    = "Interface\\Icons\\ability_hunter_huntervswild",
         sound   = "Sound\\Interface\\LevelUp.wav",
         message = "Welcome back, %s! You are currently %.1f%% done with %d EXP remaining. Keep grinding!",
     },
@@ -351,10 +405,57 @@ local playerDeathEvent = {
     },
 }
 
---===========================================================================
--- Gavrials Tips Events (using 'text' instead of 'message')
---===========================================================================
+--=========================================================================== 
+-- New Guild/Instance Events (Added for legacy mappings)
+--=========================================================================== 
+local leftInstanceEvent = {
+    LI = {
+        name    = "Left Instance",
+        icon    = "Interface\\Icons\\INV_Misc_Map01",
+        sound   = eventSounds.EI,
+        message = "%s has left the instance.",
+    },
+}
 
+local guildLevelUpEvent = {
+    GLU = {
+        name    = "Guild Level Up",
+        icon    = "Interface\\Icons\\INV_Scroll_01",
+        sound   = "Sound\\Interface\\LevelUp.wav",
+        message = "Guild member %s has reached a new level!",
+    },
+}
+
+local guildAchievementEvent = {
+    GAch = {
+        name    = "Guild Achievement",
+        icon    = "Interface\\Icons\\INV_Misc_Coin_03",
+        sound   = "Sound\\Interface\\Achievement.wav",
+        message = "Guild member %s unlocked a guild achievement!",
+    },
+}
+
+local guildLowHealthEvent = {
+    GLH = {
+        name    = "Guild Low Health",
+        icon    = "Interface\\Icons\\INV_Healthstone",
+        sound   = "Sound\\Spells\\PVPFlagTaken.wav",
+        message = "Guild member %s is at low health (%s%%)!",
+    },
+}
+
+local guildEnteredInstanceEvent = {
+    GEI = {
+        name    = "Guild Entered Instance",
+        icon    = "Interface\\Icons\\INV_Misc_Map02",
+        sound   = "Sound\\Interface\\RaidWarning.wav",
+        message = "Guild member %s has entered an instance.",
+    },
+}
+
+--=========================================================================== 
+-- Gavrials Tips Events (using 'text' instead of 'message')
+--=========================================================================== 
 local gavrialsTips = {
     GT1 = {
         text  = "Close Call from The Warrior, Gavrial the 1st: Trust Your Gut – If you have a bad feeling about an enemy or quest, skip it.",
@@ -493,10 +594,9 @@ local gavrialsTips = {
     },
 }
 
---===========================================================================
--- Mapping of All Events
---===========================================================================
-
+--=========================================================================== 
+-- Mapping of All Events 
+--=========================================================================== 
 local allEvents = {
     -- Dungeon and Raid Events
     RC    = dungeonEvents.RC,
@@ -525,7 +625,6 @@ local allEvents = {
     SLU   = dungeonEvents.SLU,
     SCOL  = dungeonEvents.SCOL,
 
-    -- Raid Events
     MC    = raidEvents.MC,
     OL    = raidEvents.OL,
     BWL   = raidEvents.BWL,
@@ -534,23 +633,20 @@ local allEvents = {
     AQ40  = raidEvents.AQ40,
     NAX   = raidEvents.NAX,
 
-    -- Guild and Progress Events
     GA    = guildEvents.GA,
     PR    = progressEvents.PR,
 
-    -- Level and Health Events
     ML    = maxLevelEvent.ML,
     LH    = lowHealthEvent.LH,
     LU    = levelUpEvent.LU,
     GD    = guildDeathEvent.GD,
     EP    = levelEvents.EP,
 
-    -- Additional Events (now centralized)
     Welcome     = welcomeEvent.Welcome,
     Welcome60   = welcomeEvent.Welcome60,
     PlayerDeath = playerDeathEvent.PlayerDeath,
 
-    -- Gavrials Tips Events (using the 'text' field)
+    -- Gavrials Tips
     GT1  = gavrialsTips.GT1,
     GT2  = gavrialsTips.GT2,
     GT3  = gavrialsTips.GT3,
@@ -578,9 +674,23 @@ local allEvents = {
     GT25 = gavrialsTips.GT25,
     GT26 = gavrialsTips.GT26,
     GT27 = gavrialsTips.GT27,
+
+    -- New Additional Events
+    BE = auraEvent.BE,      -- Aura/Buff Event
+    GR = guildRosterEvent.GR, -- Guild Roster Update Event
+    BH = bigHitEvent.BH,      -- Big Hit Event
+
+    -- New Guild/Instance Events
+    LI    = leftInstanceEvent.LI,
+    GLU   = guildLevelUpEvent.GLU,
+    GAch  = guildAchievementEvent.GAch,
+    GLH   = guildLowHealthEvent.GLH,
+    GEI   = guildEnteredInstanceEvent.GEI,
 }
 
--- Expose the complete dictionary as a global variable
+--=========================================================================== 
+-- Expose the Complete Dictionary Globally 
+--=========================================================================== 
 local dict = {
     eventTypeLookup = eventTypeLookup,
     eventIcons      = eventIcons,
