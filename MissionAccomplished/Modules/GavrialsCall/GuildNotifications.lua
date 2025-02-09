@@ -20,7 +20,7 @@ local InstanceNameToCode = {
     ["Stormwind Stockade"] = "TS",
     ["Gnomeregan"]         = "GN",
     ["Razorfen Kraul"]     = "RK",
-    ["Scarlet Monastery: Graveyard"] = "SG",
+    ["Scarlet Monastery"] = "SG",
     ["Scarlet Monastery: Library"]   = "SL",
     ["Scarlet Monastery: Armory"]    = "SA",
     ["Scarlet Monastery: Cathedral"] = "SC",
@@ -164,46 +164,46 @@ function ProcessIncomingCompressedMessage(message)
         local eventData = EventsDictionary.allEvents[extraData]
         if eventData then
             local finalMsg = string.format(eventData.message, sender)
-            GavrialsCall:DisplayMessage(sender, finalMsg, eventData.icon, {1, 1, 1})
+            GavrialsCall:DisplayMessage(sender, finalMsg, eventData.icon, {1, 1, 1}, "EI")
         else
             local fallbackMsg = string.format("%s crosses into an uncharted domain—untold perils lie in wait!", sender)
-            GavrialsCall:DisplayMessage(sender, fallbackMsg, (EventsDictionary.eventIcons and EventsDictionary.eventIcons.EI) or "Interface\\Icons\\INV_Misc_QuestionMark", {1, 1, 1})
+            GavrialsCall:DisplayMessage(sender, fallbackMsg, (EventsDictionary.eventIcons and EventsDictionary.eventIcons.EI) or "Interface\\Icons\\INV_Misc_QuestionMark", {1, 1, 1}, "EI")
         end
     elseif fullEvent == "LowHealth" then
         local eventData = EventsDictionary.allEvents["LH"]
         if eventData then
             local msg = string.format(eventData.message, sender, extraData or "??")
-            GavrialsCall:DisplayMessage(sender, msg, eventData.icon, {1, 1, 1})
+            GavrialsCall:DisplayMessage(sender, msg, eventData.icon, {1, 1, 1}, "LH")
         end
     elseif fullEvent == "LevelUp" then
         local eventData = EventsDictionary.allEvents["LU"]
         if eventData then
             local level, playerClass = strsplit(",", extraData)
             local msg = string.format(eventData.message, sender, playerClass, level)
-            GavrialsCall:DisplayMessage(sender, msg, eventData.icon, {1, 1, 1})
+            GavrialsCall:DisplayMessage(sender, msg, eventData.icon, {1, 1, 1}, "LU")
         end
     elseif fullEvent == "GuildDeath" then
         if extraData == "FD" then return end  -- Ignore feign deaths
         local eventData = EventsDictionary.allEvents["GD"]
         if eventData then
             local msg = string.format(eventData.message, sender)
-            GavrialsCall:DisplayMessage(sender, msg, eventData.icon, {1, 1, 1})
+            GavrialsCall:DisplayMessage(sender, msg, eventData.icon, {1, 1, 1}, "GD")
         end
     elseif fullEvent == "MaxLevel" then
         local eventData = EventsDictionary.allEvents["ML"]
         if eventData then
             local msg = string.format(eventData.message, sender)
-            GavrialsCall:DisplayMessage(sender, msg, eventData.icon, {1, 1, 1})
+            GavrialsCall:DisplayMessage(sender, msg, eventData.icon, {1, 1, 1}, "ML")
         end
     elseif fullEvent == "Progress" then
         local eventData = EventsDictionary.allEvents["PR"]
         if eventData then
             local msg = string.format(eventData.message, sender, extraData)
-            GavrialsCall:DisplayMessage(sender, msg, eventData.icon, {1, 1, 1})
+            GavrialsCall:DisplayMessage(sender, msg, eventData.icon, {1, 1, 1}, "PR")
         end
     else
         local fallbackMsg = string.format("%s unleashed an enigma (%s) with data '%s'—mysteries deepen!", sender, eventCode, extraData or "??")
-        GavrialsCall:DisplayMessage(sender, fallbackMsg, "Interface\\Icons\\INV_Misc_QuestionMark", {1, 1, 1})
+        GavrialsCall:DisplayMessage(sender, fallbackMsg, "Interface\\Icons\\INV_Misc_QuestionMark", {1, 1, 1}, eventCode)
     end
 end
 

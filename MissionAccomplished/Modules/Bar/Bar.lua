@@ -1,39 +1,53 @@
---=============================================================================
 -- Bar.lua
 --=============================================================================
 -- Creates and updates the XP bar for MissionAccomplished, positioned near
 -- the player frame. Includes an attached custom icon (gavicon) overlapping on
--- the left (which remains visible at all times). SHIFT+Drag to move. Provides
--- a toggle function to show/hide.
--- 
+-- the left (which remains visible at all times). SHIFT+Drag to move.
+-- Provides a toggle function to show/hide.
+--
 -- When the player reaches level 60:
 --   - The bar fills completely and turns gold.
---   - The text displays "Mission Accomplished" followed by the level 60 achievement icon.
+--   - The text displays "Mission Accomplished" plus the level 60 achievement icon.
 --   - The tooltip shows the standard header without the extra achievement icon.
 --=============================================================================
 
 MissionAccomplished = MissionAccomplished or {}
 MissionAccomplishedDB = MissionAccomplishedDB or {}
 
+local function WaitForMoveableXPBarValue()
+    if MissionAccomplishedDB and MissionAccomplishedDB.enableMoveableXPBar ~= nil then
+        MissionAccomplished_Bar_SetShown(MissionAccomplishedDB.enableMoveableXPBar)
+    else
+        C_Timer.After(0.5, WaitForMoveableXPBarValue)  -- Keep checking every 0.5s until the value is found
+    end
+end
+
+local eventFrame = CreateFrame("Frame")
+eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+eventFrame:SetScript("OnEvent", function(self, event)
+    if event == "PLAYER_ENTERING_WORLD" then
+        WaitForMoveableXPBarValue() -- Start checking after the world loads
+    end
+end)
+
+
 ---------------------------------------------------------------
 -- 1) CREATE THE XP BAR FRAME
 ---------------------------------------------------------------
 function MissionAccomplished_Bar_Setup()
     -- Prevent duplicate bar creation
-    if MissionAccomplished.xpBar then
+    if MissionAccomplished.barFrame then
         return
     end
 
-    -- Retrieve or create the XP bar's main frame
-    local barFrame = _G["MissionAccomplishedXPBarFrame"]
-        or CreateFrame("Frame", "MissionAccomplishedXPBarFrame", UIParent, "BackdropTemplate")
-    barFrame:SetSize(190, 16) -- Bar shortened on the right
+    local barFrame = _G["MissionAccomplishedXPBarFrame"] or 
+        CreateFrame("Frame", "MissionAccomplishedXPBarFrame", UIParent, "BackdropTemplate")
+    barFrame:SetSize(190, 16)  -- Bar dimensions
     barFrame:SetClampedToScreen(true)
     barFrame:SetMovable(true)
     barFrame:EnableMouse(true)
     barFrame:RegisterForDrag("LeftButton")
 
-    -- SHIFT+Drag to move
     barFrame:SetScript("OnDragStart", function(self)
         if IsShiftKeyDown() then
             self:StartMoving()
@@ -41,23 +55,19 @@ function MissionAccomplished_Bar_Setup()
     end)
     barFrame:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
-        -- Save position
         local point, _, relPoint, x, y = self:GetPoint()
         MissionAccomplishedDB.xpBar = { point = point, relPoint = relPoint, x = x, y = y }
     end)
 
-    -- Default positioning relative to the PlayerFrame (or load saved)
     if MissionAccomplishedDB.xpBar then
         local pos = MissionAccomplishedDB.xpBar
         barFrame:ClearAllPoints()
         barFrame:SetPoint(pos.point, UIParent, pos.relPoint, pos.x, pos.y)
     else
-        -- Position above the PlayerFrame (default)
         barFrame:ClearAllPoints()
         barFrame:SetPoint("BOTTOMLEFT", PlayerFrame, "TOPLEFT", 100, -22)
     end
 
-    -- Add a background + border
     barFrame:SetBackdrop({
         bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -68,27 +78,23 @@ function MissionAccomplished_Bar_Setup()
     })
     barFrame:SetBackdropColor(0, 0, 0, 0.8)
 
-    -- Create a StatusBar for XP progress
     local xpBar = CreateFrame("StatusBar", "MissionAccomplishedXPBar", barFrame, "BackdropTemplate")
-    xpBar:SetSize(180, 12) -- Slightly smaller for a border effect
+    xpBar:SetSize(180, 12)
     xpBar:SetPoint("CENTER", barFrame, "CENTER", 0, 0)
     xpBar:SetMinMaxValues(0, 1)
     xpBar:SetValue(0)
     xpBar:SetStatusBarTexture("Interface\\TARGETINGFRAME\\UI-StatusBar")
-    xpBar:SetStatusBarColor(1, 0, 0) -- Red by default
+    xpBar:SetStatusBarColor(1, 0, 0)
 
-    -- XP text
     local xpText = xpBar:CreateFontString("MissionAccomplishedXPText", "OVERLAY", "GameFontHighlight")
     xpText:SetPoint("CENTER", xpBar, "CENTER", 0, 0)
     xpText:SetFont("Fonts\\FRIZQT__.TTF", 8, "OUTLINE")
     xpText:SetText("0.0% | XP Remaining: 0")
 
-    -- Attach the gavicon to the left of the bar (always visible)
     local icon = MissionAccomplished_Bar_AddIcon(barFrame)
     icon:SetPoint("RIGHT", barFrame, "LEFT", 5, 0)
     icon:SetFrameLevel(barFrame:GetFrameLevel() + 1)
 
-    -- Tooltip for bar
     barFrame:SetScript("OnEnter", function(self)
         MissionAccomplished_Bar_ShowTooltip(self)
     end)
@@ -96,10 +102,9 @@ function MissionAccomplished_Bar_Setup()
         GameTooltip:Hide()
     end)
 
-    -- Save references
     MissionAccomplished.barFrame = barFrame
-    MissionAccomplished.xpBar   = xpBar
-    MissionAccomplished.xpText  = xpText
+    MissionAccomplished.xpBar = xpBar
+    MissionAccomplished.xpText = xpText
 
     barFrame:Show()
 end
@@ -108,8 +113,8 @@ end
 -- 2) ATTACH ICON TO THE XP BAR
 ---------------------------------------------------------------
 function MissionAccomplished_Bar_AddIcon(parent)
-    local iconFrame = _G["MissionAccomplishedIconFrame"]
-        or CreateFrame("Frame", "MissionAccomplishedIconFrame", parent)
+    local iconFrame = _G["MissionAccomplishedIconFrame"] or 
+        CreateFrame("Frame", "MissionAccomplishedIconFrame", parent)
     iconFrame:SetSize(24, 24)
     local iconTexture = iconFrame:CreateTexture(nil, "ARTWORK")
     iconTexture:SetAllPoints(iconFrame)
@@ -124,7 +129,6 @@ function MissionAccomplished_Bar_AddIcon(parent)
     end)
     iconFrame:SetScript("OnMouseUp", function(_, button)
         if button == "LeftButton" then
-            -- Open your Settings frame
             MissionAccomplished_ToggleSettings()
         end
     end)
@@ -133,12 +137,11 @@ function MissionAccomplished_Bar_AddIcon(parent)
 end
 
 ---------------------------------------------------------------
--- 3) SHOW TOOLTIP (Standard Header without extra achievement icon)
+-- 3) SHOW TOOLTIP
 ---------------------------------------------------------------
 function MissionAccomplished_Bar_ShowTooltip(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
     
-    -- Updated header: attach the gavicon to the left of the MissionAccomplished title
     local gavicon = "|TInterface\\AddOns\\MissionAccomplished\\Contents\\gavicon.blp:16:16:0:0|t "
     local headerLine = gavicon .. "|cff00ff00MissionAccomplished|r"
     GameTooltip:AddLine(headerLine)
@@ -165,8 +168,6 @@ function MissionAccomplished_Bar_ShowTooltip(self)
         local timeTo60 = MissionAccomplished.GetTimeToLevel60()
         GameTooltip:AddLine(string.format("Time until level 60: %s", MissionAccomplished.FormatSeconds(timeTo60)), 1, 1, 1)
     else
-        -- At level 60, show the standard header above and then the XP line
-        -- will be handled by the bar's text (see below).
         local achievementIcon = "|TInterface\\Icons\\achievement_level_60:16:16:0:0|t"
         GameTooltip:AddLine("XP This Level: Mission Accomplished " .. achievementIcon, 1, 1, 1)
     end
@@ -194,17 +195,14 @@ function MissionAccomplished_Bar_Update()
     local level = UnitLevel("player") or 1
 
     if level >= 60 then
-        -- For level 60 or higher:
-        -- Fill the bar completely, change its color to gold, and display
-        -- "Mission Accomplished" plus the level 60 achievement icon.
         xpBar:SetValue(1)
-        xpBar:SetStatusBarColor(1, 0.84, 0)  -- Gold color (approximate)
+        xpBar:SetStatusBarColor(1, 0.84, 0)
         local achievementIcon = "|TInterface\\Icons\\achievement_level_60:16:16:0:0|t"
         xpText:SetText("Mission Accomplished " .. achievementIcon)
     else
         local percent = (xpSoFar / xpMax) * 100
         xpBar:SetValue(percent / 100)
-        xpBar:SetStatusBarColor(1, 0, 0)  -- Red color for below level 60
+        xpBar:SetStatusBarColor(1, 0, 0)
         local xpLeft = xpMax - xpSoFar
         xpText:SetText(string.format("%.1f%% | XP Remaining: %d", percent, xpLeft))
     end
@@ -218,9 +216,7 @@ eventFrame:RegisterEvent("PLAYER_XP_UPDATE")
 eventFrame:RegisterEvent("PLAYER_LEVEL_UP")
 eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 eventFrame:SetScript("OnEvent", function(_, event)
-    if event == "PLAYER_XP_UPDATE"
-       or event == "PLAYER_LEVEL_UP"
-       or event == "PLAYER_ENTERING_WORLD" then
+    if event == "PLAYER_XP_UPDATE" or event == "PLAYER_LEVEL_UP" or event == "PLAYER_ENTERING_WORLD" then
         MissionAccomplished_Bar_Update()
     end
 end)
@@ -232,15 +228,35 @@ MissionAccomplished_Bar_Setup()
 MissionAccomplished_Bar_Update()
 
 ---------------------------------------------------------------
--- 6) TOGGLE FUNCTION FOR SETTINGS
+-- 6) TOGGLE FUNCTION FOR THE MOVEABLE XP BAR
 ---------------------------------------------------------------
-function MissionAccomplished_Bar_SetShown(enable)
+MissionAccomplished_Bar_SetShown = function(enable)
+    -- Ensure our saved variable table exists.
+    MissionAccomplishedDB = MissionAccomplishedDB or {}
+    -- Save the toggle state.
+    MissionAccomplishedDB.enableMoveableXPBar = enable
+
     if not MissionAccomplished.barFrame then
         return
     end
+
     if enable then
+        if MissionAccomplishedDB.xpBar then
+            local pos = MissionAccomplishedDB.xpBar
+            MissionAccomplished.barFrame:ClearAllPoints()
+            MissionAccomplished.barFrame:SetPoint(pos.point, UIParent, pos.relPoint, pos.x, pos.y)
+        else
+            MissionAccomplished.barFrame:ClearAllPoints()
+            MissionAccomplished.barFrame:SetPoint("BOTTOMLEFT", PlayerFrame, "TOPLEFT", 100, -22)
+        end
         MissionAccomplished.barFrame:Show()
     else
         MissionAccomplished.barFrame:Hide()
     end
 end
+_G.MissionAccomplished_Bar_SetShown = MissionAccomplished_Bar_SetShown
+
+---------------------------------------------------------------
+-- Apply the saved toggle state on load (after barFrame is created)
+---------------------------------------------------------------
+MissionAccomplished_Bar_SetShown(MissionAccomplishedDB.enableMoveableXPBar)

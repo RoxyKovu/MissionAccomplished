@@ -19,8 +19,6 @@ Library/EventsDictionary.lua
 MissionAccomplished.xml
 Core.lua
 Modules/GavrialsCall/GavrialsCall.xml
-Modules/Bar/Bar.lua
-#Modules/Bar/ExperienceBar.lua
 GavrialCorner.lua
 NagletsToolkit.lua
 Armory.lua
@@ -29,12 +27,16 @@ Guild.lua
 Modules/DatabaseBuild/DatabaseBuild.lua
 Modules/DatabaseBuild/GuildDatabaseBuild.lua
 Modules/FirstTime/FirstTimeUserPrompt.lua
-Modules/EventLog/EventsLog.lua
+Modules/EventLog/EventsLog.lua  
+
+Modules/Bar/ExperienceBar.lua  
+Modules/Bar/Bar.lua  
 
 #------------------------------------
 # UI / Settings
 #------------------------------------
-SettingsContent.lua
+            
+SettingsContent.lua              
 About.lua
 Settings.lua
 Modules/GavrialsCall/GavrialsCall.lua

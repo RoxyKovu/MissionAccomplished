@@ -180,13 +180,13 @@ local function ShowFirstTimeUsePrompt()
     moveableXPCheckbox:SetChecked(MissionAccomplishedDB.enableMoveableXPBar or false)
     optionCheckboxes.moveableXP = moveableXPCheckbox
 
-    local uiXPCheckbox = CreateFrame("CheckButton", nil, togglesFrame, "UICheckButtonTemplate")
-    uiXPCheckbox.text = uiXPCheckbox:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    uiXPCheckbox.text:SetPoint("LEFT", uiXPCheckbox, "RIGHT", 5, 0)
-    uiXPCheckbox.text:SetText("UI XP Bar (Coming Soon)")
-    uiXPCheckbox:SetChecked(false)
-    uiXPCheckbox:Disable()
-    optionCheckboxes.uiXP = uiXPCheckbox
+local uiXPCheckbox = CreateFrame("CheckButton", nil, togglesFrame, "UICheckButtonTemplate")
+uiXPCheckbox.text = uiXPCheckbox:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+uiXPCheckbox.text:SetPoint("LEFT", uiXPCheckbox, "RIGHT", 5, 0)
+uiXPCheckbox.text:SetText("Enable UI XP Bar") -- ✅ Enabled and renamed
+uiXPCheckbox:SetChecked(MissionAccomplishedDB.enableUIXPBar or false)
+optionCheckboxes.uiXP = uiXPCheckbox
+
 
     local tipsCheckbox = CreateFrame("CheckButton", nil, togglesFrame, "UICheckButtonTemplate")
     tipsCheckbox.text = tipsCheckbox:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -245,20 +245,42 @@ local function ShowFirstTimeUsePrompt()
     nextButton:SetSize(80, 22)
     nextButton:SetPoint("BOTTOMRIGHT", ftFrame, "BOTTOMRIGHT", -20, 20)
     nextButton:SetText("Next")
-    nextButton:SetScript("OnClick", function(self)
-        if currentPage < totalPages then
-            currentPage = currentPage + 1
-            UpdatePage()
-        else
-            MissionAccomplishedDB.eventFrameEnabled = optionCheckboxes.callouts:GetChecked()
-            MissionAccomplishedDB.eventSoundsEnabled = optionCheckboxes.eventSounds:GetChecked()
-            MissionAccomplishedDB.enableMoveableXPBar = optionCheckboxes.moveableXP:GetChecked()
-            MissionAccomplishedDB.enableGavrialsTips = optionCheckboxes.tips:GetChecked()
-            MissionAccomplishedDB.firstTimeSetup = true
-            MissionAccomplishedDB.showFirstTimePrompt = false
-            ftFrame:Hide()
-        end
-    end)
+-- Function to update toggle settings in real-time when changed
+local function ApplyToggleChanges()
+    MissionAccomplishedDB.eventFrameEnabled = optionCheckboxes.callouts:GetChecked()
+    MissionAccomplishedDB.eventSoundsEnabled = optionCheckboxes.eventSounds:GetChecked()
+    MissionAccomplishedDB.enableMoveableXPBar = optionCheckboxes.moveableXP:GetChecked()
+    MissionAccomplishedDB.enableUIXPBar = optionCheckboxes.uiXP:GetChecked()
+    MissionAccomplishedDB.enableGavrialsTips = optionCheckboxes.tips:GetChecked()
+
+    -- Apply settings in real-time
+    if MissionAccomplished_Bar_SetShown then
+        MissionAccomplished_Bar_SetShown(MissionAccomplishedDB.enableMoveableXPBar)
+    end
+    if MissionAccomplished_ExperienceBar_SetShown then
+        MissionAccomplished_ExperienceBar_SetShown(MissionAccomplishedDB.enableUIXPBar)
+    end
+end
+
+-- Ensure checkboxes apply changes immediately on click
+for _, checkbox in pairs(optionCheckboxes) do
+    checkbox:SetScript("OnClick", ApplyToggleChanges)
+end
+
+-- Modify Next Button to save settings properly on finish
+nextButton:SetScript("OnClick", function(self)
+    if currentPage < totalPages then
+        currentPage = currentPage + 1
+        UpdatePage()
+    else
+        -- Ensure final settings are stored
+        ApplyToggleChanges()
+        MissionAccomplishedDB.firstTimeSetup = true
+        MissionAccomplishedDB.showFirstTimePrompt = false
+        ftFrame:Hide()
+    end
+end)
+
 
     --------------------------------------------------
     -- UpdatePage: Set text, manage toggles, and show textures.

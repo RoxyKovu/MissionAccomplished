@@ -154,10 +154,10 @@ local dungeonEvents = {
         message = "%s invades Razorfen Kraul—thorn-riddled corridors brimming with primal threats!",
     },
     SG = {
-        name    = "Scarlet Monastery: Graveyard",
+        name    = "Scarlet Monastery",
         icon    = "Interface\\Icons\\INV_Misc_Bone_Skull_02",
         sound   = eventSounds.EI,
-        message = "%s enters the Graveyard—restless spirits cry out for retribution!",
+        message = "%s enters the Scarlet Monastery—fanatical crusaders and vengeful spirits stir at the intruder’s presence.",
     },
     SL = {
         name    = "Scarlet Monastery: Library",

@@ -10,51 +10,76 @@
 MissionAccomplished = MissionAccomplished or {}
 MissionAccomplishedDB = MissionAccomplishedDB or {}
 
--- Layering configuration variables:
-local customFrameStrata = "DIALOG"   -- One of the highest strata available.
-local maxFrameLevel = 9999           -- An arbitrarily high frame level.
+-- Default the toggle state if not set.
+if MissionAccomplishedDB.enableUIXPBar == nil then
+    MissionAccomplishedDB.enableUIXPBar = false
+end
 
--- MultiBar offset configuration (adjust these values as desired):
-local multiBarBottomLeftYOffset = 10   -- Pixels to move MultiBarBottomLeft upward.
-local multiBarBottomRightYOffset = 0   -- Pixels to move MultiBarBottomRight upward.
+-- Optionally force the default state to false on reload.
+-- Remove or comment out the next line if you want the saved state to persist.
+MissionAccomplishedDB.enableUIXPBar = false
+
+-- Layering configuration variables:
+local customFrameStrata = "MEDIUM"   -- Should be above native XP/Rep bars but below the action bars.
+local maxFrameLevel = 100            -- Adjust as needed.
+
+-- Base dimensions for header:
+local basePartWidth = 250            -- Each part's width (4 parts = 1000 total)
+local baseTotalWidth = basePartWidth * 4
+local baseHeight = 13                -- Header height
+
+-- New dimensions for the progress bar:
+local progressBarWidth = 990         -- New progress bar width
+local progressBarHeight = 10         -- New progress bar height
+
+-- Crop variables (normalized coordinates):
+local cropTop = 0.04                 -- Crop 4% from the top
+local cropBottom = 0.16              -- Crop 16% from the bottom
+
+-- MultiBar offset configuration:
+local multiBarBottomLeftYOffset = baseHeight + progressBarHeight + 5   -- e.g. 13 + 10 + 5 = 28 pixels
+local multiBarBottomRightYOffset = baseHeight + progressBarHeight + 5
+
+-- Tweakable adjustments (adjust these values as needed):
+local repAdjustment = -5           -- When ReputationWatchBar is visible, subtract 5 pixels (moves it up a smidge)
+local actionBarAdjustment = 0     -- When rep bar is visible, subtract 5 pixels from action bars' offset
+local extraActionBarDown = -11      -- Move action bars down an extra 50 pixels when the XP bar is enabled
+
+---------------------------------------------------------------
+-- Forward declaration for ScheduleReposition.
+---------------------------------------------------------------
+local ScheduleReposition
+
+---------------------------------------------------------------
+-- Helper Function: Determine the native bar to anchor to.
+---------------------------------------------------------------
+local function GetXPAnchorFrame()
+    if ReputationWatchBar and ReputationWatchBar:IsShown() then
+        return ReputationWatchBar
+    elseif MainMenuExpBar and MainMenuExpBar:IsShown() then
+        return MainMenuExpBar
+    elseif MainMenuBar then
+        return MainMenuBar
+    else
+        return UIParent
+    end
+end
 
 ---------------------------------------------------------------
 -- 1) SETUP THE EXPERIENCE HEADER FRAME (UI XP Bar Header)
 ---------------------------------------------------------------
-local basePartWidth = 250   -- Each part's width (4 parts = 1000 total)
-local baseTotalWidth = basePartWidth * 4
-local baseHeight = 13       -- Header height
-
--- New dimensions for the progress bar
-local progressBarWidth = 990   -- New progress bar width
-local progressBarHeight = 10   -- New progress bar height
-
--- Crop variables (normalized coordinates)
-local cropTop = 0.04    -- Crop 4% from the top
-local cropBottom = 0.16 -- Crop 16% from the bottom
-
--- Internal helper function to obtain the overlay texture.
-local function UI_GetOverlayTexturePath()
-    if ReputationWatchBar 
-       and ReputationWatchBar.StatusBar 
-       and ReputationWatchBar.StatusBar.XPBarTexture2 then
-        return ReputationWatchBar.StatusBar.XPBarTexture2:GetTexture()
-    end
-    return "Interface\\Buttons\\WHITE8X8"
-end
-
 local function UI_SetupExperienceHeader()
     local headerFrame = CreateFrame("Frame", "UIExperienceHeaderFrame", UIParent, "BackdropTemplate")
     headerFrame:SetSize(baseTotalWidth, baseHeight)
     headerFrame:ClearAllPoints()
-    -- If the native experience bar exists, position immediately above it; otherwise, center on screen.
-    if MainMenuExpBar then
-        headerFrame:SetPoint("BOTTOM", MainMenuExpBar, "TOP", 0, 0)  -- No extra vertical offset
+
+    local anchorFrame = GetXPAnchorFrame()
+    if anchorFrame then
+        headerFrame:SetPoint("BOTTOM", anchorFrame, "TOP", 0, 2)  -- 2-pixel gap above the anchor
     else
         headerFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
     end
 
-    -- Force our header frame to use the high strata and max frame level.
     headerFrame:SetFrameStrata(customFrameStrata)
     headerFrame:SetFrameLevel(maxFrameLevel)
 
@@ -73,6 +98,15 @@ local function UI_SetupExperienceHeader()
     headerFrame:SetScript("OnLeave", function(self)
          GameTooltip:Hide()
     end)
+    
+    local function UI_GetOverlayTexturePath()
+        if ReputationWatchBar 
+           and ReputationWatchBar.StatusBar 
+           and ReputationWatchBar.StatusBar.XPBarTexture2 then
+            return ReputationWatchBar.StatusBar.XPBarTexture2:GetTexture()
+        end
+        return "Interface\\Buttons\\WHITE8X8"
+    end
     
     local overlayPath = UI_GetOverlayTexturePath()
     local parts = {
@@ -113,7 +147,6 @@ local function UI_SetupGaviconIcon()
          iconFrame:SetPoint("RIGHT", UIParent, "CENTER", -5, 0)
     end
 
-    -- Force the icon to use the same high strata and max frame level.
     iconFrame:SetFrameStrata(customFrameStrata)
     iconFrame:SetFrameLevel(maxFrameLevel)
     
@@ -145,17 +178,14 @@ function MissionAccomplished_ExperienceBar_Setup()
          return -- Prevent duplicate creation.
     end
 
-    -- Parent the UI XP bar frame to the header so that it appears behind the header textures.
     local parentHeader = UIExperienceHeaderFrame or UI_SetupExperienceHeader()
-    local uiXPBarFrame = _G["MissionAccomplishedUIXPBarFrame"] or
-         CreateFrame("Frame", "MissionAccomplishedUIXPBarFrame", parentHeader, "BackdropTemplate")
+    local uiXPBarFrame = CreateFrame("Frame", "MissionAccomplishedUIXPBarFrame", parentHeader, "BackdropTemplate")
     uiXPBarFrame:SetSize(progressBarWidth, progressBarHeight)
     uiXPBarFrame:SetClampedToScreen(true)
     uiXPBarFrame:EnableMouse(true)
     uiXPBarFrame:ClearAllPoints()
     uiXPBarFrame:SetPoint("CENTER", parentHeader, "CENTER", 0, 0)
 
-    -- Force the XP bar frame to use the same high strata and max frame level.
     uiXPBarFrame:SetFrameStrata(customFrameStrata)
     uiXPBarFrame:SetFrameLevel(maxFrameLevel)
 
@@ -190,10 +220,8 @@ function MissionAccomplished_ExperienceBar_Setup()
     uiXPText:SetFont("Fonts\\FRIZQT__.TTF", 12, "OUTLINE")
     uiXPText:SetText("50% XP")
     
-    -- Hide XP text until hover
     uiXPTextFrame:Hide()
     
-    -- Save references for later use.
     MissionAccomplished.uiXPBarFrame = uiXPBarFrame
     MissionAccomplished.uiXPBar = uiXPBar
     MissionAccomplished.uiXPTextFrame = uiXPTextFrame
@@ -248,6 +276,8 @@ function MissionAccomplished_ExperienceBar_ShowTooltip(self)
          local timeTo60 = MissionAccomplished.GetTimeToLevel60()
          GameTooltip:AddLine(string.format("Time until level 60: %s", MissionAccomplished.FormatSeconds(timeTo60)), 1, 1, 1)
     else
+         MissionAccomplished.uiXPBar:SetValue(1)
+         MissionAccomplished.uiXPBar:SetStatusBarColor(1, 0.84, 0)
          local achievementIcon = "|TInterface\\Icons\\achievement_level_60:16:16:0:0|t"
          GameTooltip:AddLine("XP This Level: Mission Accomplished " .. achievementIcon, 1, 1, 1)
     end
@@ -310,11 +340,14 @@ local header = UI_SetupExperienceHeader()
 UI_SetupGaviconIcon()
 MissionAccomplished_ExperienceBar_Setup()
 MissionAccomplished_ExperienceBar_Update()
+-- Apply the saved toggle state so the UI remembers the choice.
+MissionAccomplished_ExperienceBar_SetShown(MissionAccomplishedDB.enableUIXPBar)
 
 ---------------------------------------------------------------
--- 9) TOGGLE FUNCTION FOR UI XP BAR
+-- 9) TOGGLE FUNCTION FOR UI XP BAR (Assigned Globally)
 ---------------------------------------------------------------
-function MissionAccomplished_ExperienceBar_SetShown(enable)
+MissionAccomplished_ExperienceBar_SetShown = function(enable)
+    MissionAccomplishedDB.enableUIXPBar = enable  -- Save the toggle state
     if MissionAccomplished.uiXPBarFrame then
         if enable then
             MissionAccomplished.uiXPBarFrame:Show()
@@ -338,26 +371,128 @@ function MissionAccomplished_ExperienceBar_SetShown(enable)
             UIExperienceHeaderIconFrame:Hide()
         end
     end
+
+    -- Reset UI positions based on the toggle state.
+    ScheduleReposition()
+end
+_G.MissionAccomplished_ExperienceBar_SetShown = MissionAccomplished_ExperienceBar_SetShown
+
+---------------------------------------------------------------
+-- BASELINE STORAGE FOR ACTION BARS
+---------------------------------------------------------------
+local baseline = {}
+
+local function InitializeBaselinePositions()
+    if MultiBarBottomLeft and not baseline.MultiBarBottomLeft then
+        baseline.MultiBarBottomLeft = {
+            x = MultiBarBottomLeft:GetLeft() or 50,
+            y = MultiBarBottomLeft:GetBottom() or 50
+        }
+    end
+    if MultiBarBottomRight and not baseline.MultiBarBottomRight then
+        baseline.MultiBarBottomRight = {
+            x = UIParent:GetRight() - (MultiBarBottomRight:GetRight() or 0),
+            y = MultiBarBottomRight:GetBottom() or 50
+        }
+    end
+    if PetActionBarFrame and not baseline.PetActionBar then
+        baseline.PetActionBar = {
+            x = PetActionBarFrame:GetLeft() or 0,
+            y = PetActionBarFrame:GetBottom() or 90
+        }
+    end
 end
 
 ---------------------------------------------------------------
--- 10) ADJUST MULTIBARS (MultiBarBottomLeft & MultiBarBottomRight)
+-- REPOSITION UI ELEMENTS: Anchor the custom XP bar above the current anchor
+-- and shift additional action bars upward by a fixed offset.
 ---------------------------------------------------------------
-local multiBarAdjustFrame = CreateFrame("Frame")
-multiBarAdjustFrame:RegisterEvent("PLAYER_LOGIN")
-multiBarAdjustFrame:SetScript("OnEvent", function(self, event)
-    -- Delay the adjustment by 0.5 seconds to ensure the default UI has finished anchoring the bars.
-    C_Timer.After(0.5, function()
-        -- Adjust MultiBarBottomLeft using its absolute position.
-        local left = MultiBarBottomLeft:GetLeft() or 0
-        local bottom = MultiBarBottomLeft:GetBottom() or 0
-        MultiBarBottomLeft:ClearAllPoints()
-        MultiBarBottomLeft:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", left, bottom + multiBarBottomLeftYOffset)
+local function RepositionAllBars()
+    InitializeBaselinePositions()  -- Capture baseline positions once.
 
-        -- Adjust MultiBarBottomRight using its absolute position.
-        local rLeft = MultiBarBottomRight:GetLeft() or 0
-        local rBottom = MultiBarBottomRight:GetBottom() or 0
+    -- If the XP bar is enabled, calculate offsets; otherwise, use 0.
+    local xpBarTotalHeight = 0
+    local repOffset = 0
+    local actionOffset = 0
+
+    if MissionAccomplishedDB.enableUIXPBar then
+        xpBarTotalHeight = baseHeight + progressBarHeight + 2  -- header + progress bar + gap
+        if ReputationWatchBar and ReputationWatchBar:IsShown() then
+            repOffset = (ReputationWatchBar:GetHeight() or 0) + repAdjustment
+            actionOffset = extraActionBarDown + actionBarAdjustment
+        else
+            actionOffset = extraActionBarDown
+        end
+    end
+
+    -- 1. If XP bar is enabled, position the header; otherwise, hide it.
+    if MissionAccomplishedDB.enableUIXPBar then
+        local anchorFrame = GetXPAnchorFrame()
+        if UIExperienceHeaderFrame and anchorFrame then
+            UIExperienceHeaderFrame:ClearAllPoints()
+            UIExperienceHeaderFrame:SetPoint("BOTTOM", anchorFrame, "TOP", 0, 2)
+            UIExperienceHeaderFrame:Show()
+        end
+    else
+        if UIExperienceHeaderFrame then UIExperienceHeaderFrame:Hide() end
+        if UIExperienceHeaderIconFrame then UIExperienceHeaderIconFrame:Hide() end
+    end
+
+    -- 2. MainMenuBar remains at the bottom.
+    if MainMenuBar then
+        MainMenuBar:ClearAllPoints()
+        MainMenuBar:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 0)
+    end
+
+    -- 3. Reposition action bars.
+    if MultiBarBottomLeft and baseline.MultiBarBottomLeft then
+        MultiBarBottomLeft:ClearAllPoints()
+        MultiBarBottomLeft:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT",
+            baseline.MultiBarBottomLeft.x,
+            baseline.MultiBarBottomLeft.y + xpBarTotalHeight + repOffset + actionOffset)
+    end
+
+    if MultiBarBottomRight and baseline.MultiBarBottomRight then
         MultiBarBottomRight:ClearAllPoints()
-        MultiBarBottomRight:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", rLeft, rBottom + multiBarBottomRightYOffset)
-    end)
+        MultiBarBottomRight:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT",
+            -baseline.MultiBarBottomRight.x,
+            baseline.MultiBarBottomRight.y + xpBarTotalHeight + repOffset + actionOffset)
+    end
+
+    if PetActionBarFrame and baseline.PetActionBar then
+        PetActionBarFrame:ClearAllPoints()
+        PetActionBarFrame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT",
+            baseline.PetActionBar.x,
+            baseline.PetActionBar.y + xpBarTotalHeight + repOffset + actionOffset)
+    end
+end
+
+---------------------------------------------------------------
+-- Debounce mechanism to prevent too many rapid updates.
+---------------------------------------------------------------
+ScheduleReposition = function()
+    if not repositionScheduled then
+        repositionScheduled = true
+        C_Timer.After(0.5, function()
+            repositionScheduled = false
+            RepositionAllBars()
+        end)
+    end
+end
+
+---------------------------------------------------------------
+-- Register events to trigger repositioning.
+---------------------------------------------------------------
+local barRepositionFrame = CreateFrame("Frame")
+barRepositionFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+barRepositionFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+barRepositionFrame:RegisterEvent("UPDATE_FACTION")
+barRepositionFrame:RegisterEvent("PLAYER_XP_UPDATE")
+barRepositionFrame:SetScript("OnEvent", function(self, event)
+    ScheduleReposition()
 end)
+
+if ReputationWatchBar then
+    ReputationWatchBar:HookScript("OnShow", ScheduleReposition)
+    ReputationWatchBar:HookScript("OnHide", ScheduleReposition)
+end

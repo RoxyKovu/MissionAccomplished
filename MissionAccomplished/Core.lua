@@ -1,5 +1,27 @@
 MissionAccomplished = MissionAccomplished or {}
 
+-- Ensure the database table exists
+MissionAccomplishedDB = MissionAccomplishedDB or {}
+
+---------------------------------------------------------------
+-- Force the toggle function for the UI XP Bar (ExperienceBar)
+---------------------------------------------------------------
+MissionAccomplished_ExperienceBar_SetShown = function(enable)
+    MissionAccomplishedDB.enableUIXPBar = enable
+    -- Stub: Actual functionality will be replaced when ExperienceBar.lua loads.
+end
+_G.MissionAccomplished_ExperienceBar_SetShown = MissionAccomplished_ExperienceBar_SetShown
+
+---------------------------------------------------------------
+-- Force the toggle function for the Moveable XP Bar (Bar.lua)
+---------------------------------------------------------------
+MissionAccomplished_Bar_SetShown = function(enable)
+    MissionAccomplishedDB.enableMoveableXPBar = enable
+    -- Stub: Actual functionality will be replaced when Bar.lua loads.
+end
+_G.MissionAccomplished_Bar_SetShown = MissionAccomplished_Bar_SetShown
+
+
 ---------------------------------------------------------------
 -- XP Requirements Table (Classic style up to level 60)
 -- NOTE: The 60th value represents the XP needed to go from level 60 to 61.
